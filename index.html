@@ -1,0 +1,1565 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChromaIQ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&family=Orbitron:wght@500;700&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="i18n-styles.css?v=20260829c">
+    <link rel="stylesheet" href="crop-tool.css?v=20260829c">
+    <link rel="stylesheet" href="color-grading.css?v=20260829c">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <link rel="stylesheet" href="style.css?v=20260829c">
+  
+
+<style id="chroma-overrides">
+/* ── Navbar: Transparent Glassmorphism + Indigo tint ── */
+.navbar {
+  background: rgba(8, 6, 28, 0.45) !important;
+  backdrop-filter: blur(18px) saturate(1.8) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(1.8) !important;
+  border-bottom: 1px solid rgba(79,70,229,0.22) !important;
+  box-shadow: 0 1px 40px rgba(79,70,229,0.12), inset 0 1px 0 rgba(129,140,248,0.08) !important;
+}
+.navbar::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(79,70,229,0.06) 0%, transparent 60%);
+  pointer-events: none;
+}
+/* ── Hero: compact vertical layout ── */
+.hero {
+  height: auto !important;
+min-height: auto !important;
+  padding: 40px 5% !important;
+  flex-direction: column !important;
+  gap: 0 !important;
+  justify-content: center !important;
+}
+#features {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+.hero-cotainer {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  text-align: center !important;
+  gap: 12px !important;
+  max-width: 860px;
+  margin: 0 auto;
+}
+/* Badge — آخر عنصر، شكله طبيعي */
+.hero-cotainer .ai-hero-badge {
+  margin-top: 4px;
+  position: static;
+}
+/* Text styles */
+.hero-headline {
+  font-size: clamp(28px, 5vw, 56px) !important;
+  margin: 0 !important;
+  line-height: 1.18 !important;
+}
+.hero-subtitle {
+  font-size: clamp(14px, 2vw, 18px) !important;
+  margin: 0 0 8px !important;
+  max-width: 600px;
+}
+/* Ring comes FIRST and is bigger */
+.hero-cotainer .ring-wrapper {
+  width: min(430px, 75vw) !important;
+  margin-bottom: 8px;
+  order: -1;  /* ensures ring is first regardless of DOM order */
+}
+/* ── Color Grading canvas: larger ── */
+#cg-main-canvas {
+  max-height: min(380px, 52vh) !important;
+}
+/* Zoom controls */
+.cg-zoom-group {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--glass-border);
+  border-radius: 9px;
+  padding: 2px 5px;
+  gap: 3px !important;
+}
+.cg-zoom-val {
+  font-family: 'Orbitron', monospace;
+  font-size: 10px; color: var(--text-main);
+  min-width: 36px; text-align: center;
+  letter-spacing: 0.03em;
+}
+/* Split hint text */
+.cg-split-hint {
+  position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,0.7); padding: 4px 12px; border-radius: 20px;
+  font-size: 10px; color: rgba(255,255,255,0.7); white-space: nowrap;
+  pointer-events: none; display: none;
+}
+.cg-split-hint.show { display: block; }
+</style>
+</head>
+<body>
+
+     <!-- Global Loader -->
+    <div class="loader-overlay" id="spectrum-loader">
+    <div class="chroma-loader">
+    <div class="chroma-ring-outer"></div>
+    <div class="chroma-ring-inner"></div>
+    <div class="chroma-dot"></div>
+    <div class="chroma-dot"></div>
+    <div class="chroma-dot"></div>
+    <div class="chroma-core">
+        <img class="loader-brand-mark" src="assets/chromaiq-mark.png" alt="" width="550" height="550" aria-hidden="true">
+    </div>
+</div>
+        <div id="loader-text" style="font-size: 18px; font-weight: 600; margin-top: 15px;" data-i18n="common.processing">Processing...</div>
+    </div>
+
+    <!-- Custom Brush Cursor -->
+    <div id="brush-cursor"></div>
+
+    <!-- Toast -->
+    <div class="remover-toast" id="remover-toast"></div>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="nav-left">
+            <a class="brand-link" href="#" aria-label="ChromaIQ home">
+                <img class="brand-logo" src="assets/chromaiq-logo.png" alt="ChromaIQ" width="15000" height="261">
+            </a>
+        </div>
+        <div class="nav-right">
+            <ul class="nav-links">
+                <li><a href="#grading-hub" data-i18n="nav.gradingHub">Interactive Analysis</a></li>
+                <li><a href="#object-remover" data-i18n="nav.objectRemover">Object Remover</a></li>
+                <li><a href="#sticker-maker" data-i18n="nav.stickerMaker">Sticker Maker</a></li>
+                <li><a href="#image-enhancer" data-i18n="nav.imageEnhancer">Image Enhancer</a></li>
+            </ul>
+            <!-- Hamburger (mobile only) -->
+            <button class="nav-hamburger" id="nav-hamburger" aria-label="Open menu" data-i18n-aria="nav.openMenu" aria-expanded="false">
+                <span></span><span></span><span></span>
+            </button>
+            <!-- Language Switcher (hover to reveal / switch) -->
+            <div class="lang-switcher" role="group" aria-label="Language Selection">
+                <i class="fa-solid fa-globe lang-switcher-icon" aria-hidden="true"></i>
+                <button class="lang-btn" data-lang="ar" aria-pressed="false" onclick="i18n.setLanguage('ar')" title="العربية">AR</button>
+                <button class="lang-btn active" data-lang="en" aria-pressed="true" onclick="i18n.setLanguage('en')" title="English">EN</button>
+            </div>
+        </div>
+        <div class="nav-mobile-panel" id="nav-mobile-panel">
+        <ul>
+            <li><a href="#grading-hub" data-i18n="nav.gradingHub"><i class="fa-solid fa-sliders nav-mobile-icon"></i> Interactive Analysis</a></li>
+            <li><a href="#object-remover" data-i18n="nav.objectRemover"><i class="fa-solid fa-eraser nav-mobile-icon"></i> Object Remover</a></li>
+            <li><a href="#sticker-maker" data-i18n="nav.stickerMaker"><i class="fa-solid fa-scissors nav-mobile-icon"></i> Sticker Maker</a></li>
+            <li><a href="#image-enhancer" data-i18n="nav.imageEnhancer"><i class="fa-solid fa-wand-magic-sparkles nav-mobile-icon"></i> Image Enhancer</a></li>
+        </ul>
+    </div>
+    </nav>
+      <!-- ============================================================
+     BACKGROUND
+     ============================================================ -->
+<div class="bg-layer" aria-hidden="true">
+  <div class="noise"></div>
+  <div class="stars" id="stars"></div>
+  <div class="blob" style="width:500px;height:500px;top:-10%;left:-8%;background:rgba(68,85,255,0.08);--bd:14s;--bx:30px;--by:20px"></div>
+  <div class="blob" style="width:400px;height:400px;top:10%;right:-5%;background:rgba(136,51,255,0.07);--bd:18s;--bx:-20px;--by:30px"></div>
+  <div class="blob" style="width:350px;height:350px;bottom:15%;left:10%;background:rgba(0,153,255,0.06);--bd:22s;--bx:25px;--by:-15px"></div>
+  <div class="blob" style="width:300px;height:300px;bottom:20%;right:10%;background:rgba(0,238,255,0.05);--bd:16s;--bx:-18px;--by:22px"></div>
+</div>
+<main>
+<section class="hero" aria-label="Hero">
+   <div class="hero-cotainer">
+  <!-- THE RING — pure SVG polygon mesh ring -->
+  <div class="ring-wrapper" role="img" aria-label="AI neural network ring visualization">
+    <svg class="ring-svg" viewBox="0 0 520 520" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+    <!-- Rainbow gradient sweep — 13 evenly-spaced hues -->
+        <linearGradient id="rg0" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#00EEFF"/><stop offset="100%" stop-color="#0099FF"/></linearGradient>
+        <linearGradient id="rg1" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#0099FF"/><stop offset="100%" stop-color="#4455FF"/></linearGradient>
+        <linearGradient id="rg2" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#4455FF"/><stop offset="100%" stop-color="#8833FF"/></linearGradient>
+        <linearGradient id="rg3" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#8833FF"/><stop offset="100%" stop-color="#AA22FF"/></linearGradient>
+        <linearGradient id="rg4" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#AA22FF"/><stop offset="100%" stop-color="#FF00DD"/></linearGradient>
+        <linearGradient id="rg5" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#FF00DD"/><stop offset="100%" stop-color="#FF44AA"/></linearGradient>
+        <linearGradient id="rg6" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#FF44AA"/><stop offset="100%" stop-color="#FF2244"/></linearGradient>
+        <linearGradient id="rg7" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#FF2244"/><stop offset="100%" stop-color="#FF6600"/></linearGradient>
+        <linearGradient id="rg8" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#FF6600"/><stop offset="100%" stop-color="#FFDD00"/></linearGradient>
+        <linearGradient id="rg9" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#FFDD00"/><stop offset="100%" stop-color="#AAFF00"/></linearGradient>
+        <linearGradient id="rg10" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#AAFF00"/><stop offset="100%" stop-color="#00FF66"/></linearGradient>
+        <linearGradient id="rg11" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#00FF66"/><stop offset="100%" stop-color="#00FFCC"/></linearGradient>
+        <linearGradient id="rg12" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#00FFCC"/><stop offset="100%" stop-color="#00EEFF"/></linearGradient>
+        <!-- Wave light sweep gradient -->
+        <linearGradient id="wave-g" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%"   stop-color="white" stop-opacity="0"/>
+          <stop offset="45%"  stop-color="white" stop-opacity="0"/>
+          <stop offset="50%"  stop-color="white" stop-opacity="0.65"/>
+          <stop offset="55%"  stop-color="white" stop-opacity="0"/>
+          <stop offset="100%" stop-color="white" stop-opacity="0"/>
+        </linearGradient>
+
+        <!-- Outer glow filter -->
+        <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+          <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="glow-node" x="-100%" y="-100%" width="300%" height="300%">
+          <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+          <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="glow-strong" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="5" result="coloredBlur"/>
+          <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+
+        <!-- Clip to ring donut shape (outer R=245, inner R=150) -->
+        <clipPath id="ring-clip">
+          <path d="
+            M260,15 A245,245 0 1,1 259.99,15 Z
+            M260,110 A150,150 0 1,0 260.01,110 Z
+          " fill-rule="evenodd"/>
+        </clipPath>
+
+      </defs>
+
+      <!-- === OUTER GLOW RING (ambient halo) === -->
+      <circle cx="260" cy="260" r="245" fill="none" stroke="url(#rg2)" stroke-width="0.5" opacity="0.2" filter="url(#glow-strong)"/>
+      <circle cx="260" cy="260" r="150" fill="none" stroke="url(#rg0)" stroke-width="0.5" opacity="0.15" filter="url(#glow-strong)"/>
+
+            <!-- Segment 0 — Cyan→Blue  (0.0°–27.7°) -->
+      <g filter="url(#glow)" clip-path="url(#ring-clip)">
+        <path d="M260.0,15.0 A245,245 0 0,1 373.9,43.1" fill="none" stroke="url(#rg0)" stroke-width="1.4" opacity="0.7" style="animation: line-shimmer 1.9s ease-in-out 0.0s infinite"/>
+        <path d="M260.0,110.0 A150,150 0 0,1 329.7,127.2" fill="none" stroke="url(#rg0)" stroke-width="1.1" opacity="0.55" style="animation: line-shimmer 2.2s ease-in-out 0.24s infinite"/>
+        <line x1="260.0" y1="15.0" x2="260.0" y2="110.0" stroke="#00EEFF" stroke-width="0.7" opacity="0.4" style="animation: line-shimmer 2.8s ease-in-out 0.0s infinite"/>
+        <line x1="299.3" y1="18.2" x2="284.1" y2="111.9" stroke="#00D2FF" stroke-width="0.7" opacity="0.35" style="animation: line-shimmer 3.0s ease-in-out 0.1s infinite"/>
+        <line x1="337.6" y1="27.6" x2="307.5" y2="117.7" stroke="#00B5FF" stroke-width="0.7" opacity="0.35" style="animation: line-shimmer 3.2s ease-in-out 0.2s infinite"/>
+        <line x1="373.9" y1="43.1" x2="329.7" y2="127.2" stroke="#0099FF" stroke-width="0.7" opacity="0.4" style="animation: line-shimmer 3.4s ease-in-out 0.3s infinite"/>
+        <line x1="260.0" y1="15.0" x2="329.7" y2="127.2" stroke="#00D4FF" stroke-width="0.5" opacity="0.2" style="animation: line-shimmer 3.8s ease-in-out 0.36s infinite"/>
+        <line x1="373.9" y1="43.1" x2="260.0" y2="110.0" stroke="#00B2FF" stroke-width="0.5" opacity="0.2" style="animation: line-shimmer 3.8s ease-in-out 0.6s infinite"/>
+      </g>
+
+      <!-- Segment 1 — Blue→Indigo  (27.7°–55.4°) -->
+      <g filter="url(#glow)" clip-path="url(#ring-clip)">
+        <path d="M373.9,43.1 A245,245 0 0,1 461.6,120.8" fill="none" stroke="url(#rg1)" stroke-width="1.4" opacity="0.7" style="animation: line-shimmer 2.1s ease-in-out 0.12s infinite"/>
+        <path d="M329.7,127.2 A150,150 0 0,1 383.4,174.8" fill="none" stroke="url(#rg1)" stroke-width="1.1" opacity="0.55" style="animation: line-shimmer 2.4s ease-in-out 0.36s infinite"/>
+        <line x1="373.9" y1="43.1" x2="329.7" y2="127.2" stroke="#0099FF" stroke-width="0.7" opacity="0.4" style="animation: line-shimmer 3.0s ease-in-out 0.1s infinite"/>
+        <line x1="407.2" y1="64.1" x2="350.1" y2="140.1" stroke="#1782FF" stroke-width="0.7" opacity="0.35" style="animation: line-shimmer 3.2s ease-in-out 0.2s infinite"/>
+        <line x1="436.7" y1="90.3" x2="368.2" y2="156.1" stroke="#2D6CFF" stroke-width="0.7" opacity="0.35" style="animation: line-shimmer 3.4s ease-in-out 0.3s infinite"/>
+        <line x1="461.6" y1="120.8" x2="383.4" y2="174.8" stroke="#4455FF" stroke-width="0.7" opacity="0.4" style="animation: line-shimmer 3.6s ease-in-out 0.4s infinite"/>
+        <line x1="373.9" y1="43.1" x2="383.4" y2="174.8" stroke="#1485FF" stroke-width="0.5" opacity="0.2" style="animation: line-shimmer 4.0s ease-in-out 0.48s infinite"/>
+        <line x1="461.6" y1="120.8" x2="329.7" y2="127.2" stroke="#3069FF" stroke-width="0.5" opacity="0.2" style="animation: line-shimmer 4.0s ease-in-out 0.72s infinite"/>
+      </g>
+
+      <!-- Segment 2 — Indigo→Purple  (55.4°–83.1°) -->
+      <g filter="url(#glow)" clip-path="url(#ring-clip)">
+        <path d="M461.6,120.8 A245,245 0 0,1 503.2,230.5" fill="none" stroke="url(#rg2)" stroke-width="1.4" opacity="0.7" style="animation: line-shimmer 2.3s ease-in-out 0.24s infinite"/>
+        <path d="M383.4,174.8 A150,150 0 0,1 408.9,241.9" fill="none" stroke="url(#rg2)" stroke-width="1.1" opacity="0.55" style="animation: line-shimmer 2.6s ease-in-out 0.48s infinite"/>
+        <line x1="461.6" y1="120.8" x2="383.4" y2="174.8" stroke="#4455FF" stroke-width="0.7" opacity="0.4" style="animation: line-shimmer 3.2s ease-in-out 0.2s infinite"/>
+        <line x1="481.3" y1="155.0" x2="395.5" y2="195.7" stroke="#5B4AFF" stroke-width="0.7" opacity="0.35" style="animation: line-shimmer 3.4s ease-in-out 0.3s infinite"/>
+        <line x1="495.3" y1="191.8" x2="404.1" y2="218.3" stroke="#713EFF" stroke-width="0.7" opacity="0.35" style="animation: line-shimmer 3.6s ease-in-out 0.4s infinite"/>
+        <line x1="503.2" y1="230.5" x2="408.9" y2="241.9" stroke="#8833FF" stroke-width="0.7" opacity="0.4" style="animation: line-shimmer 2.8s ease-in-out 0.0s infinite"/>
+        <line x1="461.6" y1="120.8" x2="408.9" y2="241.9" stroke="#584BFF" stroke-width="0.5" opacity="0.2" style="animation: line-shimmer 4.2s ease-in-out 0.6s infinite"/>
+        <line x1="503.2" y1="230.5" x2="383.4" y2="174.8" stroke="#743DFF" stroke-width="0.5" opacity="0.2" style="animation: line-shimmer 4.2s ease-in-out 0.0s infinite"/>
+      </g>
+
+      <!-- Segment 3 — Purple→Violet  (83.1°–110.8°) -->
+      <g filter="url(#glow)" clip-path="url(#ring-clip)">
+        <path d="M503.2,230.5 A245,245 0 0,1 489.1,346.9" fill="none" stroke="url(#rg3)" stroke-width="1.4" opacity="0.7" style="animation: line-shimmer 2.5s ease-in-out 0.36s infinite"/>
+        <path d="M408.9,241.9 A150,150 0 0,1 400.3,313.2" fill="none" stroke="url(#rg3)" stroke-width="1.1" opacity="0.55" style="animation: line-shimmer 2.8s ease-in-out 0.6s infinite"/>
+        <line x1="503.2" y1="230.5" x2="408.9" y2="241.9" stroke="#8833FF" stroke-width="0.7" opacity="0.4" style="animation: line-shimmer 3.4s ease-in-out 0.3s infinite"/>
+        <line x1="504.8" y1="269.9" x2="409.9" y2="266.0" stroke="#932DFF" stroke-width="0.7" opacity="0.35" style="animation: line-shimmer 3.6s ease-in-out 0.4s infinite"/>
+        <line x1="500.0" y1="309.0" x2="407.0" y2="290.0" stroke="#9F28FF" stroke-width="0.7" opacity="0.35" style="animation: line-shimmer 2.8s ease-in-out 0.0s infinite"/>
+        <line x1="489.1" y1="346.9" x2="400.3" y2="313.2" stroke="#AA22FF" stroke-width="0.7" opacity="0.4" style="animation: line-shimmer 3.0s ease-in-out 0.1s infinite"/>
+        <line x1="503.2" y1="230.5" x2="400.3" y2="313.2" stroke="#922EFF" stroke-width="0.5" opacity="0.2" style="animation: line-shimmer 4.4s ease-in-out 0.72s infinite"/>
+        <line x1="489.1" y1="346.9" x2="408.9" y2="241.9" stroke="#A027FF" stroke-width="0.5" opacity="0.2" style="animation: line-shimmer 4.4s ease-in-out 0.12s infinite"/>
+      </g>
+
+      <!-- Segment 4 — Violet→Magenta  (110.8°–138.5°) -->
+      <g filter="url(#glow)" clip-path="url(#ring-clip)">
+        <path d="M489.1,346.9 A245,245 0 0,1 422.5,443.4" fill="none" stroke="url(#rg4)" stroke-width="1.4" opacity="0.7" style="animation: line-shimmer 2.7s ease-in-out 0.48s infinite"/>
+        <path d="M400.3,313.2 A150,150 0 0,1 359.5,372.3" fill="none" stroke="url(#rg4)" stroke-width="1.1" opacity="0.55" style="animation: line-shimmer 3.0s ease-in-out 0.72s infinite"/>
+        <line x1="489.1" y1="346.9" x2="400.3" y2="313.2" stroke="#AA22FF" stroke-width="0.7" opacity="0.4" style="animation: line-shimmer 3.6s ease-in-out 0.4s infinite"/>
+        <line x1="472.2" y1="382.5" x2="389.9" y2="335.0" stroke="#C617F4" stroke-width="0.7" opacity="0.35" style="animation: line-shimmer 2.8s ease-in-out 0.0s infinite"/>
+        <line x1="449.8" y1="414.9" x2="376.2" y2="354.9" stroke="#E30BE8" stroke-width="0.7" opacity="0.35" style="animation: line-shimmer 3.0s ease-in-out 0.1s infinite"/>
+        <line x1="422.5" y1="443.4" x2="359.5" y2="372.3" stroke="#FF00DD" stroke-width="0.7" opacity="0.4" style="animation: line-shimmer 3.2s ease-in-out 0.2s infinite"/>
+        <line x1="489.1" y1="346.9" x2="359.5" y2="372.3" stroke="#C418F5" stroke-width="0.5" opacity="0.2" style="animation: line-shimmer 4.6s ease-in-out 0.0s infinite"/>
+        <line x1="422.5" y1="443.4" x2="400.3" y2="313.2" stroke="#E60AE7" stroke-width="0.5" opacity="0.2" style="animation: line-shimmer 3.6s ease-in-out 0.24s infinite"/>
+      </g>
+
+      <!-- Segment 5 — Magenta→Pink  (138.5°–166.2°) -->
+      <g filter="url(#glow)" clip-path="url(#ring-clip)">
+        <path d="M422.5,443.4 A245,245 0 0,1 318.6,497.9" fill="none" stroke="url(#rg5)" stroke-width="1.4" opacity="0.7" style="animation: line-shimmer 1.9s ease-in-out 0.6s infinite"/>
+        <path d="M359.5,372.3 A150,150 0 0,1 295.9,405.6" fill="none" stroke="url(#rg5)" stroke-width="1.1" opacity="0.55" style="animation: line-shimmer 2.2s ease-in-out 0.0s infinite"/>
+        <line x1="422.5" y1="443.4" x2="359.5" y2="372.3" stroke="#FF00DD" stroke-width="0.7" opacity="0.4" style="animation: line-shimmer 2.8s ease-in-out 0.0s infinite"/>
+        <line x1="390.9" y1="467.1" x2="340.2" y2="386.8" stroke="#FF17CC" stroke-width="0.7" opacity="0.35" style="animation: line-shimmer 3.0s ease-in-out 0.1s infinite"/>
+        <line x1="356.0" y1="485.4" x2="318.8" y2="398.0" stroke="#FF2DBB" stroke-width="0.7" opacity="0.35" style="animation: line-shimmer 3.2s ease-in-out 0.2s infinite"/>
+        <line x1="318.6" y1="497.9" x2="295.9" y2="405.6" stroke="#FF44AA" stroke-width="0.7" opacity="0.4" style="animation: line-shimmer 3.4s ease-in-out 0.3s infinite"/>
+        <line x1="422.5" y1="443.4" x2="295.9" y2="405.6" stroke="#FF14CE" stroke-width="0.5" opacity="0.2" style="animation: line-shimmer 3.8s ease-in-out 0.12s infinite"/>
+        <line x1="318.6" y1="497.9" x2="359.5" y2="372.3" stroke="#FF30B9" stroke-width="0.5" opacity="0.2" style="animation: line-shimmer 3.8s ease-in-out 0.36s infinite"/>
+      </g>
+
+      <!-- Segment 6 — Pink→Red  (166.2°–193.8°) -->
+      <g filter="url(#glow)" clip-path="url(#ring-clip)">
+        <path d="M318.6,497.9 A245,245 0 0,1 201.4,497.9" fill="none" stroke="url(#rg6)" stroke-width="1.4" opacity="0.7" style="animation: line-shimmer 2.1s ease-in-out 0.72s infinite"/>
+        <path d="M295.9,405.6 A150,150 0 0,1 224.1,405.6" fill="none" stroke="url(#rg6)" stroke-width="1.1" opacity="0.55" style="animation: line-shimmer 2.4s ease-in-out 0.12s infinite"/>
+        <line x1="318.6" y1="497.9" x2="295.9" y2="405.6" stroke="#FF44AA" stroke-width="0.7" opacity="0.4" style="animation: line-shimmer 3.0s ease-in-out 0.1s infinite"/>
+        <line x1="279.7" y1="504.2" x2="272.1" y2="409.5" stroke="#FF3988" stroke-width="0.7" opacity="0.35" style="animation: line-shimmer 3.2s ease-in-out 0.2s infinite"/>
+        <line x1="240.3" y1="504.2" x2="247.9" y2="409.5" stroke="#FF2D66" stroke-width="0.7" opacity="0.35" style="animation: line-shimmer 3.4s ease-in-out 0.3s infinite"/>
+        <line x1="201.4" y1="497.9" x2="224.1" y2="405.6" stroke="#FF2244" stroke-width="0.7" opacity="0.4" style="animation: line-shimmer 3.6s ease-in-out 0.4s infinite"/>
+        <line x1="318.6" y1="497.9" x2="224.1" y2="405.6" stroke="#FF3A8B" stroke-width="0.5" opacity="0.2" style="animation: line-shimmer 4.0s ease-in-out 0.24s infinite"/>
+        <line x1="201.4" y1="497.9" x2="295.9" y2="405.6" stroke="#FF2C63" stroke-width="0.5" opacity="0.2" style="animation: line-shimmer 4.0s ease-in-out 0.48s infinite"/>
+      </g>
+
+      <!-- Segment 7 — Red→Orange  (193.8°–221.5°) -->
+      <g filter="url(#glow)" clip-path="url(#ring-clip)">
+        <path d="M201.4,497.9 A245,245 0 0,1 97.5,443.4" fill="none" stroke="url(#rg7)" stroke-width="1.4" opacity="0.7" style="animation: line-shimmer 2.3s ease-in-out 0.0s infinite"/>
+        <path d="M224.1,405.6 A150,150 0 0,1 160.5,372.3" fill="none" stroke="url(#rg7)" stroke-width="1.1" opacity="0.55" style="animation: line-shimmer 2.6s ease-in-out 0.24s infinite"/>
+        <line x1="201.4" y1="497.9" x2="224.1" y2="405.6" stroke="#FF2244" stroke-width="0.7" opacity="0.4" style="animation: line-shimmer 3.2s ease-in-out 0.2s infinite"/>
+        <line x1="164.0" y1="485.4" x2="201.2" y2="398.0" stroke="#FF392D" stroke-width="0.7" opacity="0.35" style="animation: line-shimmer 3.4s ease-in-out 0.3s infinite"/>
+        <line x1="129.1" y1="467.1" x2="179.8" y2="386.8" stroke="#FF4F17" stroke-width="0.7" opacity="0.35" style="animation: line-shimmer 3.6s ease-in-out 0.4s infinite"/>
+        <line x1="97.5" y1="443.4" x2="160.5" y2="372.3" stroke="#FF6600" stroke-width="0.7" opacity="0.4" style="animation: line-shimmer 2.8s ease-in-out 0.0s infinite"/>
+        <line x1="201.4" y1="497.9" x2="160.5" y2="372.3" stroke="#FF3630" stroke-width="0.5" opacity="0.2" style="animation: line-shimmer 4.2s ease-in-out 0.36s infinite"/>
+        <line x1="97.5" y1="443.4" x2="224.1" y2="405.6" stroke="#FF5214" stroke-width="0.5" opacity="0.2" style="animation: line-shimmer 4.2s ease-in-out 0.6s infinite"/>
+      </g>
+
+      <!-- Segment 8 — Orange→Yellow  (221.5°–249.2°) -->
+      <g filter="url(#glow)" clip-path="url(#ring-clip)">
+        <path d="M97.5,443.4 A245,245 0 0,1 30.9,346.9" fill="none" stroke="url(#rg8)" stroke-width="1.4" opacity="0.7" style="animation: line-shimmer 2.5s ease-in-out 0.12s infinite"/>
+        <path d="M160.5,372.3 A150,150 0 0,1 119.7,313.2" fill="none" stroke="url(#rg8)" stroke-width="1.1" opacity="0.55" style="animation: line-shimmer 2.8s ease-in-out 0.36s infinite"/>
+        <line x1="97.5" y1="443.4" x2="160.5" y2="372.3" stroke="#FF6600" stroke-width="0.7" opacity="0.4" style="animation: line-shimmer 3.4s ease-in-out 0.3s infinite"/>
+        <line x1="70.2" y1="414.9" x2="143.8" y2="354.9" stroke="#FF8E00" stroke-width="0.7" opacity="0.35" style="animation: line-shimmer 3.6s ease-in-out 0.4s infinite"/>
+        <line x1="47.8" y1="382.5" x2="130.1" y2="335.0" stroke="#FFB500" stroke-width="0.7" opacity="0.35" style="animation: line-shimmer 2.8s ease-in-out 0.0s infinite"/>
+        <line x1="30.9" y1="346.9" x2="119.7" y2="313.2" stroke="#FFDD00" stroke-width="0.7" opacity="0.4" style="animation: line-shimmer 3.0s ease-in-out 0.1s infinite"/>
+        <line x1="97.5" y1="443.4" x2="119.7" y2="313.2" stroke="#FF8A00" stroke-width="0.5" opacity="0.2" style="animation: line-shimmer 4.4s ease-in-out 0.48s infinite"/>
+        <line x1="30.9" y1="346.9" x2="160.5" y2="372.3" stroke="#FFB900" stroke-width="0.5" opacity="0.2" style="animation: line-shimmer 4.4s ease-in-out 0.72s infinite"/>
+      </g>
+
+      <!-- Segment 9 — Yellow→Lime  (249.2°–276.9°) -->
+      <g filter="url(#glow)" clip-path="url(#ring-clip)">
+        <path d="M30.9,346.9 A245,245 0 0,1 16.8,230.5" fill="none" stroke="url(#rg9)" stroke-width="1.4" opacity="0.7" style="animation: line-shimmer 2.7s ease-in-out 0.24s infinite"/>
+        <path d="M119.7,313.2 A150,150 0 0,1 111.1,241.9" fill="none" stroke="url(#rg9)" stroke-width="1.1" opacity="0.55" style="animation: line-shimmer 3.0s ease-in-out 0.48s infinite"/>
+        <line x1="30.9" y1="346.9" x2="119.7" y2="313.2" stroke="#FFDD00" stroke-width="0.7" opacity="0.4" style="animation: line-shimmer 3.6s ease-in-out 0.4s infinite"/>
+        <line x1="20.0" y1="309.0" x2="113.0" y2="290.0" stroke="#E3E800" stroke-width="0.7" opacity="0.35" style="animation: line-shimmer 2.8s ease-in-out 0.0s infinite"/>
+        <line x1="15.2" y1="269.9" x2="110.1" y2="266.0" stroke="#C6F400" stroke-width="0.7" opacity="0.35" style="animation: line-shimmer 3.0s ease-in-out 0.1s infinite"/>
+        <line x1="16.8" y1="230.5" x2="111.1" y2="241.9" stroke="#AAFF00" stroke-width="0.7" opacity="0.4" style="animation: line-shimmer 3.2s ease-in-out 0.2s infinite"/>
+        <line x1="30.9" y1="346.9" x2="111.1" y2="241.9" stroke="#E6E700" stroke-width="0.5" opacity="0.2" style="animation: line-shimmer 4.6s ease-in-out 0.6s infinite"/>
+        <line x1="16.8" y1="230.5" x2="119.7" y2="313.2" stroke="#C4F500" stroke-width="0.5" opacity="0.2" style="animation: line-shimmer 3.6s ease-in-out 0.0s infinite"/>
+      </g>
+
+      <!-- Segment 10 — Lime→Green  (276.9°–304.6°) -->
+      <g filter="url(#glow)" clip-path="url(#ring-clip)">
+        <path d="M16.8,230.5 A245,245 0 0,1 58.4,120.8" fill="none" stroke="url(#rg10)" stroke-width="1.4" opacity="0.7" style="animation: line-shimmer 1.9s ease-in-out 0.36s infinite"/>
+        <path d="M111.1,241.9 A150,150 0 0,1 136.6,174.8" fill="none" stroke="url(#rg10)" stroke-width="1.1" opacity="0.55" style="animation: line-shimmer 2.2s ease-in-out 0.6s infinite"/>
+        <line x1="16.8" y1="230.5" x2="111.1" y2="241.9" stroke="#AAFF00" stroke-width="0.7" opacity="0.4" style="animation: line-shimmer 2.8s ease-in-out 0.0s infinite"/>
+        <line x1="24.7" y1="191.8" x2="115.9" y2="218.3" stroke="#71FF22" stroke-width="0.7" opacity="0.35" style="animation: line-shimmer 3.0s ease-in-out 0.1s infinite"/>
+        <line x1="38.7" y1="155.0" x2="124.5" y2="195.7" stroke="#39FF44" stroke-width="0.7" opacity="0.35" style="animation: line-shimmer 3.2s ease-in-out 0.2s infinite"/>
+        <line x1="58.4" y1="120.8" x2="136.6" y2="174.8" stroke="#00FF66" stroke-width="0.7" opacity="0.4" style="animation: line-shimmer 3.4s ease-in-out 0.3s infinite"/>
+        <line x1="16.8" y1="230.5" x2="136.6" y2="174.8" stroke="#77FF1F" stroke-width="0.5" opacity="0.2" style="animation: line-shimmer 3.8s ease-in-out 0.72s infinite"/>
+        <line x1="58.4" y1="120.8" x2="111.1" y2="241.9" stroke="#33FF47" stroke-width="0.5" opacity="0.2" style="animation: line-shimmer 3.8s ease-in-out 0.12s infinite"/>
+      </g>
+
+      <!-- Segment 11 — Green→Teal  (304.6°–332.3°) -->
+      <g filter="url(#glow)" clip-path="url(#ring-clip)">
+        <path d="M58.4,120.8 A245,245 0 0,1 146.1,43.1" fill="none" stroke="url(#rg11)" stroke-width="1.4" opacity="0.7" style="animation: line-shimmer 2.1s ease-in-out 0.48s infinite"/>
+        <path d="M136.6,174.8 A150,150 0 0,1 190.3,127.2" fill="none" stroke="url(#rg11)" stroke-width="1.1" opacity="0.55" style="animation: line-shimmer 2.4s ease-in-out 0.72s infinite"/>
+        <line x1="58.4" y1="120.8" x2="136.6" y2="174.8" stroke="#00FF66" stroke-width="0.7" opacity="0.4" style="animation: line-shimmer 3.0s ease-in-out 0.1s infinite"/>
+        <line x1="83.3" y1="90.3" x2="151.8" y2="156.1" stroke="#00FF88" stroke-width="0.7" opacity="0.35" style="animation: line-shimmer 3.2s ease-in-out 0.2s infinite"/>
+        <line x1="112.8" y1="64.1" x2="169.9" y2="140.1" stroke="#00FFAA" stroke-width="0.7" opacity="0.35" style="animation: line-shimmer 3.4s ease-in-out 0.3s infinite"/>
+        <line x1="146.1" y1="43.1" x2="190.3" y2="127.2" stroke="#00FFCC" stroke-width="0.7" opacity="0.4" style="animation: line-shimmer 3.6s ease-in-out 0.4s infinite"/>
+        <line x1="58.4" y1="120.8" x2="190.3" y2="127.2" stroke="#00FF85" stroke-width="0.5" opacity="0.2" style="animation: line-shimmer 4.0s ease-in-out 0.0s infinite"/>
+        <line x1="146.1" y1="43.1" x2="136.6" y2="174.8" stroke="#00FFAD" stroke-width="0.5" opacity="0.2" style="animation: line-shimmer 4.0s ease-in-out 0.24s infinite"/>
+      </g>
+
+      <!-- Segment 12 — Teal→Cyan  (332.3°–360.0°) -->
+      <g filter="url(#glow)" clip-path="url(#ring-clip)">
+        <path d="M146.1,43.1 A245,245 0 0,1 260.0,15.0" fill="none" stroke="url(#rg12)" stroke-width="1.4" opacity="0.7" style="animation: line-shimmer 2.3s ease-in-out 0.6s infinite"/>
+        <path d="M190.3,127.2 A150,150 0 0,1 260.0,110.0" fill="none" stroke="url(#rg12)" stroke-width="1.1" opacity="0.55" style="animation: line-shimmer 2.6s ease-in-out 0.0s infinite"/>
+        <line x1="146.1" y1="43.1" x2="190.3" y2="127.2" stroke="#00FFCC" stroke-width="0.7" opacity="0.4" style="animation: line-shimmer 3.2s ease-in-out 0.2s infinite"/>
+        <line x1="182.4" y1="27.6" x2="212.5" y2="117.7" stroke="#00F9DD" stroke-width="0.7" opacity="0.35" style="animation: line-shimmer 3.4s ease-in-out 0.3s infinite"/>
+        <line x1="220.7" y1="18.2" x2="235.9" y2="111.9" stroke="#00F4EE" stroke-width="0.7" opacity="0.35" style="animation: line-shimmer 3.6s ease-in-out 0.4s infinite"/>
+        <line x1="260.0" y1="15.0" x2="260.0" y2="110.0" stroke="#00EEFF" stroke-width="0.7" opacity="0.4" style="animation: line-shimmer 2.8s ease-in-out 0.0s infinite"/>
+        <line x1="146.1" y1="43.1" x2="260.0" y2="110.0" stroke="#00FADB" stroke-width="0.5" opacity="0.2" style="animation: line-shimmer 4.2s ease-in-out 0.12s infinite"/>
+        <line x1="260.0" y1="15.0" x2="190.3" y2="127.2" stroke="#00F3F0" stroke-width="0.5" opacity="0.2" style="animation: line-shimmer 4.2s ease-in-out 0.36s infinite"/>
+      </g>
+
+      <!-- Outer ring nodes — 13 evenly-spaced colors (360/13 ≈ 27.69° apart) -->
+      <g filter="url(#glow-node)">
+        <!-- 0.0° Cyan -->
+        <circle cx="260.0" cy="15.0" r="2.5" fill="#00EEFF" style="animation: node-pulse-a 1.8s ease-in-out 0.0s infinite"/>
+        <!-- 27.7° Blue -->
+        <circle cx="373.9" cy="43.1" r="2.5" fill="#0099FF" style="animation: node-pulse-b 2.0s ease-in-out 0.18s infinite"/>
+        <!-- 55.4° Indigo -->
+        <circle cx="461.6" cy="120.8" r="2.5" fill="#4455FF" style="animation: node-pulse-c 2.2s ease-in-out 0.36s infinite"/>
+        <!-- 83.1° Purple -->
+        <circle cx="503.2" cy="230.5" r="2.5" fill="#8833FF" style="animation: node-pulse-d 2.4s ease-in-out 0.54s infinite"/>
+        <!-- 110.8° Violet -->
+        <circle cx="489.1" cy="346.9" r="2.5" fill="#AA22FF" style="animation: node-pulse-e 2.6s ease-in-out 0.72s infinite"/>
+        <!-- 138.5° Magenta -->
+        <circle cx="422.5" cy="443.4" r="2.5" fill="#FF00DD" style="animation: node-pulse-a 1.8s ease-in-out 0.0s infinite"/>
+        <!-- 166.2° Pink -->
+        <circle cx="318.6" cy="497.9" r="2.5" fill="#FF44AA" style="animation: node-pulse-b 2.0s ease-in-out 0.18s infinite"/>
+        <!-- 193.8° Red -->
+        <circle cx="201.4" cy="497.9" r="2.5" fill="#FF2244" style="animation: node-pulse-c 2.2s ease-in-out 0.36s infinite"/>
+        <!-- 221.5° Orange -->
+        <circle cx="97.5" cy="443.4" r="2.5" fill="#FF6600" style="animation: node-pulse-d 2.4s ease-in-out 0.54s infinite"/>
+        <!-- 249.2° Yellow -->
+        <circle cx="30.9" cy="346.9" r="2.5" fill="#FFDD00" style="animation: node-pulse-e 2.6s ease-in-out 0.72s infinite"/>
+        <!-- 276.9° Lime -->
+        <circle cx="16.8" cy="230.5" r="2.5" fill="#AAFF00" style="animation: node-pulse-a 1.8s ease-in-out 0.0s infinite"/>
+        <!-- 304.6° Green -->
+        <circle cx="58.4" cy="120.8" r="2.5" fill="#00FF66" style="animation: node-pulse-b 2.0s ease-in-out 0.18s infinite"/>
+        <!-- 332.3° Teal -->
+        <circle cx="146.1" cy="43.1" r="2.5" fill="#00FFCC" style="animation: node-pulse-c 2.2s ease-in-out 0.36s infinite"/>
+      </g>
+
+      <!-- Inner ring nodes -->
+      <g filter="url(#glow-node)">
+        <circle cx="260.0" cy="110.0" r="1.9" fill="#00EEFF" style="animation: node-pulse-c 2.2s ease-in-out 0.18s infinite"/>
+        <circle cx="329.7" cy="127.2" r="1.9" fill="#0099FF" style="animation: node-pulse-d 2.4s ease-in-out 0.36s infinite"/>
+        <circle cx="383.4" cy="174.8" r="1.9" fill="#4455FF" style="animation: node-pulse-e 2.6s ease-in-out 0.54s infinite"/>
+        <circle cx="408.9" cy="241.9" r="1.9" fill="#8833FF" style="animation: node-pulse-a 2.8s ease-in-out 0.72s infinite"/>
+        <circle cx="400.3" cy="313.2" r="1.9" fill="#AA22FF" style="animation: node-pulse-b 2.0s ease-in-out 0.0s infinite"/>
+        <circle cx="359.5" cy="372.3" r="1.9" fill="#FF00DD" style="animation: node-pulse-c 2.2s ease-in-out 0.18s infinite"/>
+        <circle cx="295.9" cy="405.6" r="1.9" fill="#FF44AA" style="animation: node-pulse-d 2.4s ease-in-out 0.36s infinite"/>
+        <circle cx="224.1" cy="405.6" r="1.9" fill="#FF2244" style="animation: node-pulse-e 2.6s ease-in-out 0.54s infinite"/>
+        <circle cx="160.5" cy="372.3" r="1.9" fill="#FF6600" style="animation: node-pulse-a 2.8s ease-in-out 0.72s infinite"/>
+        <circle cx="119.7" cy="313.2" r="1.9" fill="#FFDD00" style="animation: node-pulse-b 2.0s ease-in-out 0.0s infinite"/>
+        <circle cx="111.1" cy="241.9" r="1.9" fill="#AAFF00" style="animation: node-pulse-c 2.2s ease-in-out 0.18s infinite"/>
+        <circle cx="136.6" cy="174.8" r="1.9" fill="#00FF66" style="animation: node-pulse-d 2.4s ease-in-out 0.36s infinite"/>
+        <circle cx="190.3" cy="127.2" r="1.9" fill="#00FFCC" style="animation: node-pulse-e 2.6s ease-in-out 0.54s infinite"/>
+      </g>
+
+      <!-- Mid-edge nodes (between outer and inner, offset to sit between main nodes) -->
+      <g filter="url(#glow-node)">
+        <circle cx="307.3" cy="68.2" r="1.5" fill="#00C4FF" opacity="0.7" style="animation: node-pulse-e 3.1s ease-in-out 0.36s infinite"/>
+        <circle cx="391.0" cy="112.2" r="1.5" fill="#2277FF" opacity="0.7" style="animation: node-pulse-a 3.3s ease-in-out 0.54s infinite"/>
+        <circle cx="444.7" cy="190.0" r="1.5" fill="#6644FF" opacity="0.7" style="animation: node-pulse-b 3.5s ease-in-out 0.72s infinite"/>
+        <circle cx="456.1" cy="283.8" r="1.5" fill="#992AFF" opacity="0.7" style="animation: node-pulse-c 2.7s ease-in-out 0.0s infinite"/>
+        <circle cx="422.5" cy="372.2" r="1.5" fill="#D411EE" opacity="0.7" style="animation: node-pulse-d 2.9s ease-in-out 0.18s infinite"/>
+        <circle cx="351.8" cy="434.9" r="1.5" fill="#FF22C4" opacity="0.7" style="animation: node-pulse-e 3.1s ease-in-out 0.36s infinite"/>
+        <circle cx="260.0" cy="457.5" r="1.5" fill="#FF3377" opacity="0.7" style="animation: node-pulse-a 3.3s ease-in-out 0.54s infinite"/>
+        <circle cx="168.2" cy="434.9" r="1.5" fill="#FF4422" opacity="0.7" style="animation: node-pulse-b 3.5s ease-in-out 0.72s infinite"/>
+        <circle cx="97.5" cy="372.2" r="1.5" fill="#FFA200" opacity="0.7" style="animation: node-pulse-c 2.7s ease-in-out 0.0s infinite"/>
+        <circle cx="63.9" cy="283.8" r="1.5" fill="#D4EE00" opacity="0.7" style="animation: node-pulse-d 2.9s ease-in-out 0.18s infinite"/>
+        <circle cx="75.3" cy="190.0" r="1.5" fill="#55FF33" opacity="0.7" style="animation: node-pulse-e 3.1s ease-in-out 0.36s infinite"/>
+        <circle cx="129.0" cy="112.2" r="1.5" fill="#00FF99" opacity="0.7" style="animation: node-pulse-a 3.3s ease-in-out 0.54s infinite"/>
+        <circle cx="212.7" cy="68.2" r="1.5" fill="#00F6E6" opacity="0.7" style="animation: node-pulse-b 3.5s ease-in-out 0.72s infinite"/>
+      </g>
+      <!-- === WAVE SWEEP RING (travels around outer arc) === -->
+      <circle cx="260" cy="260" r="245"
+        fill="none"
+        stroke="white"
+        stroke-width="3"
+        opacity="0"
+        stroke-dasharray="80 1460"
+        stroke-dashoffset="0"
+        style="animation: wave-sweep 6s ease-in-out infinite; opacity: 0.5"/>
+
+      <!-- === INNER GLOW CORE (center stays clear but ambient glow visible) === -->
+      <circle cx="260" cy="260" r="148" fill="none" stroke="rgba(100,100,255,0.08)" stroke-width="40"/>
+
+    </svg>
+  </div>
+
+  <!-- ② العنوان -->
+  <h1 class="hero-headline">
+    <span data-i18n="hero.headlinePart1">Transform Your Shot</span><br>
+    <span data-i18n="hero.headlinePart2">with</span> <span class="grad-word" data-i18n="hero.headlinePart3">AI</span>
+  </h1>
+  <!-- ③ الوصف -->
+  <p class="hero-subtitle" data-i18n="hero.subtitle">Professional tools designed for the future of photography.</p>
+  <!-- ④ البادج آخر عنصر -->
+  <div class="ai-hero-badge">
+    <i class="fa-solid fa-brain"></i>
+    <span data-i18n="hero.poweredByBadge">powered by Google Gemini AI</span>
+    <span style="width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 6px #22c55e;display:inline-block;margin-right:2px;"></span>
+  </div>
+
+
+  </div>
+   </div>
+
+</section>
+
+
+<!-- ============================================================
+     FEATURES
+     ============================================================ -->
+<section class="features" id="features" aria-label="Features">
+
+
+  <div class="cards-grid">
+    <!-- Card 1 -->
+    <div class="feature-card card-1 reveal reveal-d1">
+      <div class="card-icon">⬡</div>
+      <h3 class="card-title" data-i18n="features.card1.title">Camera Settings</h3>
+      <p class="card-desc" data-i18n="features.card1.desc">Self-healing polygon network fabric that reroutes around failures in under 0.2ms — no single point of failure, ever.</p>
+    </div>
+
+    <!-- Card 2 -->
+    <div class="feature-card card-2 reveal reveal-d2">
+      <div class="card-icon">◈</div>
+      <h3 class="card-title" data-i18n="features.card2.title">Quantum-Resistant Crypto</h3>
+      <p class="card-desc" data-i18n="features.card2.desc">Lattice-based cryptography with adaptive key rotation. Hardened against both classical and post-quantum adversaries.</p>
+    </div>
+
+    <!-- Card 3 -->
+    <div class="feature-card card-3 reveal reveal-d3">
+      <div class="card-icon">⟐</div>
+      <h3 class="card-title" data-i18n="features.card3.title">Zero-Trust Execution</h3>
+      <p class="card-desc" data-i18n="features.card3.desc">Every process runs inside an isolated cryptographic enclave. Verify everything. Trust nothing.</p>
+    </div>
+
+    <!-- Card 4 -->
+    <div class="feature-card card-4 reveal reveal-d4">
+      <div class="card-icon">⊛</div>
+      <h3 class="card-title" data-i18n="features.card4.title">Adaptive AI Routing</h3>
+      <p class="card-desc" data-i18n="features.card4.desc">Transformer-driven routing intelligence continuously optimizes packet paths across millions of nodes in real time.</p>
+    </div>
+  </div>
+</section>
+
+
+
+
+
+
+</main>
+
+<!-- Stars generator (CSS variables only, no JS logic) -->
+<style id="star-styles">
+  /* Stars injected via inline style tags below */
+</style>
+
+<!-- Generate stars using pure CSS + HTML (no JS) -->
+<div class="stars" aria-hidden="true">
+  <!-- Star cluster 1: fine dust -->
+  <div class="star" style="width:1px;height:1px;top:5%;left:8%;--d:2.1s;--delay:-0.3s;--min-op:0.1;--max-op:0.5"></div>
+  <div class="star" style="width:1px;height:1px;top:12%;left:22%;--d:3.4s;--delay:-1.2s;--min-op:0.15;--max-op:0.6"></div>
+  <div class="star" style="width:1px;height:1px;top:8%;left:45%;--d:2.7s;--delay:-0.7s;--min-op:0.1;--max-op:0.45"></div>
+  <div class="star" style="width:1px;height:1px;top:18%;left:67%;--d:3.1s;--delay:-1.5s;--min-op:0.2;--max-op:0.55"></div>
+  <div class="star" style="width:1px;height:1px;top:6%;left:82%;--d:2.4s;--delay:-0.5s;--min-op:0.1;--max-op:0.5"></div>
+  <div class="star" style="width:1px;height:1px;top:25%;left:92%;--d:3.8s;--delay:-2.1s;--min-op:0.15;--max-op:0.6"></div>
+  <div class="star" style="width:1px;height:1px;top:35%;left:3%;--d:2.9s;--delay:-0.9s;--min-op:0.1;--max-op:0.45"></div>
+  <div class="star" style="width:1px;height:1px;top:42%;left:15%;--d:3.3s;--delay:-1.7s;--min-op:0.2;--max-op:0.55"></div>
+  <div class="star" style="width:1px;height:1px;top:55%;left:88%;--d:2.6s;--delay:-0.4s;--min-op:0.1;--max-op:0.5"></div>
+  <div class="star" style="width:1px;height:1px;top:62%;left:74%;--d:4.1s;--delay:-2.3s;--min-op:0.15;--max-op:0.6"></div>
+  <div class="star" style="width:1px;height:1px;top:72%;left:58%;--d:3s;--delay:-1.1s;--min-op:0.1;--max-op:0.45"></div>
+  <div class="star" style="width:1px;height:1px;top:85%;left:32%;--d:2.8s;--delay:-0.8s;--min-op:0.2;--max-op:0.55"></div>
+  <div class="star" style="width:1px;height:1px;top:91%;left:11%;--d:3.6s;--delay:-1.9s;--min-op:0.1;--max-op:0.5"></div>
+  <div class="star" style="width:1px;height:1px;top:78%;left:95%;--d:2.3s;--delay:-0.6s;--min-op:0.15;--max-op:0.6"></div>
+  <div class="star" style="width:1px;height:1px;top:3%;left:55%;--d:4.2s;--delay:-2.5s;--min-op:0.1;--max-op:0.45"></div>
+  <div class="star" style="width:1px;height:1px;top:48%;left:39%;--d:3.5s;--delay:-1.4s;--min-op:0.2;--max-op:0.55"></div>
+  <div class="star" style="width:1px;height:1px;top:67%;left:6%;--d:2.2s;--delay:-0.2s;--min-op:0.1;--max-op:0.5"></div>
+  <div class="star" style="width:1px;height:1px;top:22%;left:77%;--d:3.9s;--delay:-2.2s;--min-op:0.15;--max-op:0.6"></div>
+  <div class="star" style="width:1px;height:1px;top:38%;left:51%;--d:2.5s;--delay:-0.6s;--min-op:0.1;--max-op:0.45"></div>
+  <div class="star" style="width:1px;height:1px;top:95%;left:64%;--d:3.2s;--delay:-1.6s;--min-op:0.2;--max-op:0.55"></div>
+
+  <!-- Star cluster 2: brighter accents -->
+  <div class="star" style="width:2px;height:2px;top:14%;left:34%;--d:4.5s;--delay:-1.3s;--min-op:0.3;--max-op:0.8"></div>
+  <div class="star" style="width:2px;height:2px;top:29%;left:71%;--d:5.1s;--delay:-2.7s;--min-op:0.25;--max-op:0.75"></div>
+  <div class="star" style="width:2px;height:2px;top:57%;left:19%;--d:4.8s;--delay:-1.8s;--min-op:0.3;--max-op:0.8"></div>
+  <div class="star" style="width:2px;height:2px;top:74%;left:44%;--d:5.4s;--delay:-3.1s;--min-op:0.25;--max-op:0.7"></div>
+  <div class="star" style="width:2px;height:2px;top:88%;left:80%;--d:4.2s;--delay:-1s;--min-op:0.3;--max-op:0.8"></div>
+  <div class="star" style="width:2px;height:2px;top:44%;left:97%;--d:5.7s;--delay:-2.9s;--min-op:0.25;--max-op:0.75"></div>
+  <div class="star" style="width:2px;height:2px;top:2%;left:14%;--d:4.3s;--delay:-0.5s;--min-op:0.3;--max-op:0.8"></div>
+
+  <!-- Star cluster 3: large bright stars -->
+  <div class="star" style="width:3px;height:3px;top:9%;left:60%;--d:6.2s;--delay:-3.5s;--min-op:0.4;--max-op:0.9"></div>
+  <div class="star" style="width:3px;height:3px;top:82%;left:27%;--d:7.1s;--delay:-4.2s;--min-op:0.35;--max-op:0.85"></div>
+  <div class="star" style="width:3px;height:3px;top:47%;left:86%;--d:5.9s;--delay:-2.8s;--min-op:0.4;--max-op:0.9"></div>
+</div>
+
+    <div class="container">
+
+        <!-- ============================================================
+             Existing Section: Color Grading
+             ============================================================ -->
+<section id="grading-hub" class="glass-panel">
+  <div class="section-header">
+    <h2><i class="fa-solid fa-sliders" style="color:var(--indigo-light);margin-left:10px;"></i> <span data-i18n="colorGrading.title">Professional Color Grading Engine</span></h2>
+    <p data-i18n="colorGrading.subtitle">DaVinci Resolve–style color wheels · Real-time processing · AI grading · Film looks</p>
+  </div>
+
+  <!-- UPLOAD -->
+  <div id="cg-upload-step">
+    <div class="cg-upload-zone" id="cg-drop-zone">
+      <div class="cg-upload-icon"><i class="fa-solid fa-photo-film"></i></div>
+      <h3 style="font-size:17px;margin:0;" data-i18n="common.dragDropPrompt">Drag your photo here or click to browse</h3>
+      <p style="color:var(--text-muted);font-size:13px;margin:0;" data-i18n="common.supportedFormatsHiRes">JPG · PNG · WEBP — high resolution supported</p>
+      <p style="color:var(--c-teal,#2dd4bf);font-size:12px;margin:0;" data-i18n="rawSupport.hint"><i class="fa-solid fa-microchip" style="margin-left:4px;"></i>RAW: CR2 · NEF · ARW · DNG</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
+        <span style="padding:8px 18px;background:rgba(79,70,229,0.15);border:1px solid var(--indigo-base);border-radius:10px;font-size:13px;color:var(--indigo-light);">
+          <i class="fa-solid fa-arrow-up-from-bracket" style="margin-left:5px;"></i> <span data-i18n="common.browseFiles">Browse Files</span>
+        </span>
+        <span style="padding:8px 14px;background:rgba(255,255,255,0.04);border:1px solid var(--glass-border);border-radius:10px;font-size:13px;color:var(--text-muted);">
+          <i class="fa-solid fa-paste" style="margin-left:5px;"></i> <span data-i18n="common.pasteImage">Paste (Ctrl+V)</span>
+        </span>
+      </div>
+      <input type="file" id="cg-file-input" accept="image/*,.cr2,.cr3,.nef,.arw,.dng" style="display:none;">
+    </div>
+  </div>
+
+  <!-- WORKSPACE -->
+  <div id="cg-workspace" style="display:none;">
+
+    <!-- 1. TOOLBAR -->
+    <div class="cg-toolbar">
+      <div class="cg-toolbar-group">
+        <button class="cg-icon-btn" id="cg-undo-btn" title="Undo (Ctrl+Z)" disabled><i class="fa-solid fa-rotate-left"></i></button>
+        <button class="cg-icon-btn" id="cg-redo-btn" title="Redo (Ctrl+Y)" disabled><i class="fa-solid fa-rotate-right"></i></button>
+      </div>
+      <div class="cg-toolbar-sep"></div>
+      <span class="cg-file-info" id="cg-file-info">—</span>
+      <div class="cg-toolbar-spacer"></div>
+      <div class="cg-toolbar-group">
+        <button class="cg-view-btn" id="cg-btn-before"><i class="fa-solid fa-circle-half-stroke"></i> <span data-i18n="colorGradingV2.before">قبل</span></button>
+      </div>
+      <div class="cg-toolbar-sep"></div>
+      <!-- Zoom Controls -->
+      <div class="cg-toolbar-group cg-zoom-group">
+        <button class="cg-icon-btn" id="cg-zoom-out" title="Zoom Out"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+        <span class="cg-zoom-val" id="cg-zoom-val">100%</span>
+        <button class="cg-icon-btn" id="cg-zoom-in" title="Zoom In"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+      </div>
+      <div class="cg-toolbar-sep"></div>
+      <div class="cg-toolbar-group">
+        <button class="cg-btn-new" id="cg-btn-new"><i class="fa-solid fa-folder-open"></i> <span data-i18n="colorGradingV2.newPhoto">New</span></button>
+        <button class="cg-btn-export" id="cg-btn-export"><i class="fa-solid fa-download"></i> <span data-i18n="colorGradingV2.export">Export</span></button>
+      </div>
+    </div>
+
+    <!-- 2. CANVAS — tight wrapper so split line stays on image -->
+    <div class="cg-canvas-outer">
+      <div class="cg-canvas-wrap">
+        <canvas id="cg-main-canvas"></canvas>
+        <div class="cg-split-label cg-split-label-before" id="cg-lbl-before" style="display:none;" data-i18n="colorGradingV2.before">Before</div>
+        <div class="cg-split-label cg-split-label-after"  id="cg-lbl-after"  style="display:none;" data-i18n="colorGradingV2.after">After</div>
+        <div class="cg-split-hint" id="cg-split-hint">اسحب عجلة ليظهر الفرق • Drag a wheel to see the difference</div>
+        <div class="cg-split-handle-wrap" id="cg-split-wrap">
+          <div class="cg-split-line-el" id="cg-split-line" style="left:50%;"></div>
+          <div class="cg-split-knob" id="cg-split-knob" style="left:50%;top:50%;"><i class="fa-solid fa-arrows-left-right"></i></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. CONTROL PANEL — all tabs including SCOPES -->
+    <div class="cg-control-panel">
+      <div class="cg-ctrl-tabbar">
+        <button class="cg-ctrl-tab active" data-panel="wheels"><i class="fa-solid fa-circle-dot"></i> <span data-i18n="colorGradingV2.tabWheels">WHEELS</span></button>
+        <button class="cg-ctrl-tab" data-panel="tone"><i class="fa-solid fa-sliders"></i> <span data-i18n="colorGradingV2.tabTone">TONE</span></button>
+        <button class="cg-ctrl-tab" data-panel="scopes"><i class="fa-solid fa-chart-area"></i> <span data-i18n="colorGradingV2.tabScopes">SCOPES</span></button>
+        <button class="cg-ctrl-tab" data-panel="presets"><i class="fa-solid fa-film"></i> <span data-i18n="colorGradingV2.tabPresets">PRESETS</span></button>
+      </div>
+
+      <!-- WHEELS -->
+      <div class="cg-ctrl-panel" id="cg-panel-wheels">
+        <div class="cg-wheels-row">
+          <div class="cg-wheel-card cg-wheel-lift">
+            <div class="cg-wheel-label"><span data-i18n="colorGradingV2.wheelLift">LIFT</span> <span class="cg-wheel-label-sub" data-i18n="colorGradingV2.wheelLiftSub">Shadows</span></div>
+            <div class="cg-wheel-disc" id="cg-disc-lift"><div class="cg-wheel-pointer" id="cg-ptr-lift"></div></div>
+            <div class="cg-intensity-row">
+              <input type="range" class="cg-intensity-slider" id="cg-str-lift" min="0" max="100" value="0">
+              <span class="cg-intensity-val" id="cg-strval-lift">0</span>
+            </div>
+          </div>
+          <div class="cg-wheel-card cg-wheel-gamma">
+            <div class="cg-wheel-label"><span data-i18n="colorGradingV2.wheelGamma">GAMMA</span> <span class="cg-wheel-label-sub" data-i18n="colorGradingV2.wheelGammaSub">Mids</span></div>
+            <div class="cg-wheel-disc" id="cg-disc-gamma"><div class="cg-wheel-pointer" id="cg-ptr-gamma"></div></div>
+            <div class="cg-intensity-row">
+              <input type="range" class="cg-intensity-slider" id="cg-str-gamma" min="0" max="100" value="0">
+              <span class="cg-intensity-val" id="cg-strval-gamma">0</span>
+            </div>
+          </div>
+          <div class="cg-wheel-card cg-wheel-gain">
+            <div class="cg-wheel-label"><span data-i18n="colorGradingV2.wheelGain">GAIN</span> <span class="cg-wheel-label-sub" data-i18n="colorGradingV2.wheelGainSub">Highlights</span></div>
+            <div class="cg-wheel-disc" id="cg-disc-gain"><div class="cg-wheel-pointer" id="cg-ptr-gain"></div></div>
+            <div class="cg-intensity-row">
+              <input type="range" class="cg-intensity-slider" id="cg-str-gain" min="0" max="100" value="0">
+              <span class="cg-intensity-val" id="cg-strval-gain">0</span>
+            </div>
+          </div>
+          <div class="cg-wheel-card cg-wheel-offset">
+            <div class="cg-wheel-label"><span data-i18n="colorGradingV2.wheelOffset">OFFSET</span> <span class="cg-wheel-label-sub" data-i18n="colorGradingV2.wheelOffsetSub">Global</span></div>
+            <div class="cg-wheel-disc" id="cg-disc-offset"><div class="cg-wheel-pointer" id="cg-ptr-offset"></div></div>
+            <div class="cg-intensity-row">
+              <input type="range" class="cg-intensity-slider" id="cg-str-offset" min="0" max="100" value="0">
+              <span class="cg-intensity-val" id="cg-strval-offset">0</span>
+            </div>
+          </div>
+        </div>
+        <button class="cg-reset-wheels-btn" id="cg-reset-all"><i class="fa-solid fa-arrows-rotate"></i> <span data-i18n="colorGradingV2.resetWheels">Reset All Wheels</span></button>
+      </div>
+
+      <!-- TONE -->
+      <div class="cg-ctrl-panel" id="cg-panel-tone" style="display:none;">
+        <div class="cg-tone-2col">
+          <div class="cg-tone-item"><div class="cg-tone-item-header"><label class="cg-tone-label" for="cg-tone-exposure" data-i18n="colorGradingV2.toneExposure">Exposure</label><span class="cg-tone-val" id="cg-tone-exposure-val">0</span></div><input type="range" class="cg-tone-slider" id="cg-tone-exposure" min="-100" max="100" value="0"></div>
+          <div class="cg-tone-item"><div class="cg-tone-item-header"><label class="cg-tone-label" for="cg-tone-saturation" data-i18n="colorGradingV2.toneSaturation">Saturation</label><span class="cg-tone-val" id="cg-tone-saturation-val">0</span></div><input type="range" class="cg-tone-slider" id="cg-tone-saturation" min="-100" max="100" value="0"></div>
+          <div class="cg-tone-item"><div class="cg-tone-item-header"><label class="cg-tone-label" for="cg-tone-contrast" data-i18n="colorGradingV2.toneContrast">Contrast</label><span class="cg-tone-val" id="cg-tone-contrast-val">0</span></div><input type="range" class="cg-tone-slider" id="cg-tone-contrast" min="-100" max="100" value="0"></div>
+          <div class="cg-tone-item"><div class="cg-tone-item-header"><label class="cg-tone-label" for="cg-tone-vibrance" data-i18n="colorGradingV2.toneVibrance">Vibrance</label><span class="cg-tone-val" id="cg-tone-vibrance-val">0</span></div><input type="range" class="cg-tone-slider" id="cg-tone-vibrance" min="-100" max="100" value="0"></div>
+          <div class="cg-tone-item"><div class="cg-tone-item-header"><label class="cg-tone-label" for="cg-tone-shadows" data-i18n="colorGradingV2.toneShadows">Shadows</label><span class="cg-tone-val" id="cg-tone-shadows-val">0</span></div><input type="range" class="cg-tone-slider" id="cg-tone-shadows" min="-100" max="100" value="0"></div>
+          <div class="cg-tone-item"><div class="cg-tone-item-header"><label class="cg-tone-label" for="cg-tone-highlights" data-i18n="colorGradingV2.toneHighlights">Highlights</label><span class="cg-tone-val" id="cg-tone-highlights-val">0</span></div><input type="range" class="cg-tone-slider" id="cg-tone-highlights" min="-100" max="100" value="0"></div>
+          <div class="cg-tone-sep"></div>
+          <div class="cg-tone-item"><div class="cg-tone-item-header"><label class="cg-tone-label" for="cg-tone-temperature" data-i18n="colorGradingV2.toneTemperature">Temperature</label><span class="cg-tone-val" id="cg-tone-temperature-val">0</span></div><input type="range" class="cg-tone-slider" id="cg-tone-temperature" min="-100" max="100" value="0" style="background:linear-gradient(to right,#6ab8f7,rgba(255,255,255,0.08),#f7a96a);"></div>
+          <div class="cg-tone-item"><div class="cg-tone-item-header"><label class="cg-tone-label" for="cg-tone-tint" data-i18n="colorGradingV2.toneTint">Tint</label><span class="cg-tone-val" id="cg-tone-tint-val">0</span></div><input type="range" class="cg-tone-slider" id="cg-tone-tint" min="-100" max="100" value="0" style="background:linear-gradient(to right,#52d472,rgba(255,255,255,0.08),#cc52d4);"></div>
+        </div>
+      </div>
+
+      <!-- SCOPES — now inside the control panel as a tab -->
+      <div class="cg-ctrl-panel" id="cg-panel-scopes" style="display:none;">
+        <div class="cg-scope-tabs">
+          <button class="cg-scope-tab active" data-scope="histogram" data-i18n="colorGradingV2.scopeHistogram">HISTOGRAM</button>
+          <button class="cg-scope-tab" data-scope="parade" data-i18n="colorGradingV2.scopeParade">RGB PARADE</button>
+          <button class="cg-scope-tab" data-scope="vectorscope" data-i18n="colorGradingV2.scopeVectorscope">VECTORSCOPE</button>
+        </div>
+        <canvas id="cg-scope-canvas" width="600" height="180"></canvas>
+      </div>
+
+      <!-- PRESETS -->
+      <div class="cg-ctrl-panel" id="cg-panel-presets" style="display:none;">
+        <div class="cg-presets-wrap" id="cg-presets-wrap">
+          <button class="cg-presets-nav cg-presets-nav-prev" id="cg-presets-prev" title="Previous" aria-label="Previous presets">
+            <i class="fa-solid fa-chevron-left"></i>
+          </button>
+          <div class="cg-presets-scroll" id="cg-presets-scroll">
+            <div style="color:var(--text-muted);font-size:11px;padding:4px 0;">Upload an image to see personalized previews.</div>
+          </div>
+          <button class="cg-presets-nav cg-presets-nav-next" id="cg-presets-next" title="Next" aria-label="Next presets">
+            <i class="fa-solid fa-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+
+    </div><!-- /control-panel -->
+  </div><!-- /workspace -->
+
+  <canvas id="analysis-canvas" style="display:none;"></canvas>
+</section>
+
+<script>
+(function(){
+  function initCGTabs(){
+    /* Control panel tabs */
+    var tabs=document.querySelectorAll('.cg-ctrl-tab');
+    var panels=document.querySelectorAll('.cg-ctrl-panel');
+    tabs.forEach(function(tab){
+      tab.addEventListener('click',function(){
+        tabs.forEach(function(t){t.classList.remove('active');});
+        panels.forEach(function(p){p.style.display='none';});
+        tab.classList.add('active');
+        var el=document.getElementById('cg-panel-'+tab.dataset.panel);
+        if(el){
+          el.style.display='';
+          /* trigger scope re-render when SCOPES tab opens */
+          if(tab.dataset.panel==='scopes' && window.ChromaGrading){
+            setTimeout(function(){ window.ChromaGrading.renderScopes && window.ChromaGrading.renderScopes(); },50);
+          }
+          /* recompute presets carousel nav — it was built while this panel
+             was still display:none, so its width read as 0 back then */
+          if(tab.dataset.panel==='presets' && window.ChromaGrading){
+            setTimeout(function(){ window.ChromaGrading.updatePresetsNav && window.ChromaGrading.updatePresetsNav(); },50);
+          }
+        }
+      });
+    });
+  }
+  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',initCGTabs);}
+  else{initCGTabs();}
+})();
+</script>
+<!-- ════ END #grading-hub ═══════════════════════════════════════ -->
+
+        <!-- ============================================================
+             Existing Section: Color Harmony Wheel
+             ============================================================ -->
+        <section id="wheel-section" class="glass-panel">
+            <div class="section-header">
+                <h2 data-i18n="colorHarmony.title">Color Harmony Wheel</h2>
+                <p data-i18n="colorHarmony.subtitle">Generate harmonious palettes based on mathematical design principles.</p>
+            </div>
+            <div class="harmony-controls">
+                <input type="color" id="base-color-picker" value="#6366f1">
+                <select id="harmony-mode-select">
+                    <option value="complementary" data-i18n="colorHarmony.complementary">Complementary Colors (180°)</option>
+                    <option value="analogous" data-i18n="colorHarmony.analogous">Analogous Colors (30°)</option>
+                    <option value="triadic" data-i18n="colorHarmony.triadic">Triadic Harmony (120°)</option>
+                </select>
+                <button class="main-btn" onclick="calculateHarmonyColors()" data-i18n="colorHarmony.generate">Generate Palette</button>
+            </div>
+            <div class="palette-display-grid" id="harmony-palette-output"></div>
+        </section>
+
+        <!-- ================================================================
+             New Section: AI Object Remover
+             ================================================================ -->
+        <section id="object-remover" class="glass-panel">
+            <div class="section-header">
+                <h2>
+                    <i class="fa-solid fa-wand-magic-sparkles" style="color:var(--indigo-light); margin-left:10px;"></i>
+                    <span data-i18n="objectRemoval.title">AI Object Remover</span>
+                </h2>
+                <p data-i18n="objectRemoval.subtitle">Remove any unwanted element from your photo with a single brush stroke, with natural and professional background reconstruction</p>
+            </div>
+
+            <!-- Step Indicator -->
+            <div class="remover-steps">
+                <div class="remover-step active" id="step-ind-1">
+                    <div class="step-num">1</div>
+                    <span data-i18n="common.uploadPhoto">Upload Photo</span>
+                </div>
+                <div class="step-connector"></div>
+                <div class="remover-step" id="step-ind-2">
+                    <div class="step-num">2</div>
+                    <span data-i18n="objectRemoval.stepSelect">Select Object</span>
+                </div>
+                <div class="step-connector"></div>
+                <div class="remover-step" id="step-ind-3">
+                    <div class="step-num">3</div>
+                    <span data-i18n="objectRemoval.stepResult">Result</span>
+                </div>
+            </div>
+
+            <!-- ============================
+                 Step 1: Upload Photo
+                 ============================ -->
+            <div id="rem-upload-step">
+                <div class="upload-zone" id="remover-drop-zone"
+                     onclick="document.getElementById('remover-file-input').click()">
+                    <div class="upload-icon-wrap">
+                        <i class="fa-solid fa-image" style="font-size:32px; color:var(--indigo-light);"></i>
+                    </div>
+                    <h3 style="font-size:19px; margin-bottom:8px;" data-i18n="common.dragDropPrompt">Drag your photo here or click to browse</h3>
+                    <p style="color:var(--text-muted); font-size:14px; margin-bottom:22px;">
+                        <span data-i18n="common.supportedFormatsHiRes">Supports JPG · JPEG · PNG · WEBP — high resolution supported</span>
+                        <br><span class="raw-support-hint" data-i18n="rawSupport.hint"><i class="fa-solid fa-microchip" style="margin-left:4px;color:var(--c-teal)"></i>RAW: CR2 · NEF · ARW · DNG</span>
+                    </p>
+                    <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+                        <span style="padding:8px 20px; background:rgba(79,70,229,0.15); border:1px solid var(--indigo-base); border-radius:10px; font-size:14px; color:var(--indigo-light);">
+                            <i class="fa-solid fa-arrow-up-from-bracket" style="margin-left:6px;"></i><span data-i18n="common.browseFiles">Browse Files</span>
+                        </span>
+                    </div>
+                    <input type="file" id="remover-file-input"
+                           accept="image/jpeg,image/jpg,image/png,image/webp,.cr2,.cr3,.nef,.arw,.dng" style="display:none;">
+                </div>
+
+                <!-- Supported Objects -->
+                <div class="supported-objects-grid">
+                    <div class="obj-card"><i class="fa-solid fa-person"></i><span data-i18n="objectRemoval.objPeople">People in the background</span></div>
+                    <div class="obj-card"><i class="fa-solid fa-car"></i><span data-i18n="objectRemoval.objCars">Cars</span></div>
+                    <div class="obj-card"><i class="fa-solid fa-bolt"></i><span data-i18n="objectRemoval.objWires">Power lines</span></div>
+                    <div class="obj-card"><i class="fa-solid fa-sign-hanging"></i><span data-i18n="objectRemoval.objSigns">Signs and logos</span></div>
+                    <div class="obj-card"><i class="fa-solid fa-water"></i><span data-i18n="objectRemoval.objReflections">Shadows and reflections</span></div>
+                    <div class="obj-card"><i class="fa-solid fa-circle-xmark"></i><span data-i18n="objectRemoval.objOther">Any unwanted element</span></div>
+                </div>
+            </div>
+
+            <!-- ============================
+                 Step 2: Editor
+                 ============================ -->
+            <div id="rem-editor-step" style="display:none;">
+
+                <!-- Toolbar -->
+                <div class="remover-toolbar">
+
+                    <!-- Brush / Eraser -->
+                    <div class="tool-group">
+                        <button class="tool-btn active" id="tool-brush" title="Selection Brush" data-i18n-title="objectRemoval.brushTool">
+                            <i class="fa-solid fa-brush"></i>
+                        </button>
+                        <button class="tool-btn" id="tool-eraser" title="Eraser" data-i18n-title="common.eraser">
+                            <i class="fa-solid fa-eraser"></i>
+                        </button>
+                    </div>
+                    <div class="tool-sep"></div>
+
+                    <!-- Brush Size -->
+                    <div class="tool-group">
+                        <span class="tool-label" data-i18n="common.size">Size</span>
+                        <input type="range" class="brush-range" id="brush-size-range" min="5" max="120" value="30">
+                        <span class="brush-val" id="brush-size-label">30</span>
+                    </div>
+                    <div class="tool-sep"></div>
+
+                    <!-- Zoom In / Out -->
+                    <div class="tool-group">
+                        <button class="tool-btn" id="btn-zoom-out" title="Zoom Out" data-i18n-title="common.zoomOut">
+                            <i class="fa-solid fa-magnifying-glass-minus"></i>
+                        </button>
+                        <span class="zoom-val" id="zoom-label">100%</span>
+                        <button class="tool-btn" id="btn-zoom-in" title="Zoom In" data-i18n-title="common.zoomIn">
+                            <i class="fa-solid fa-magnifying-glass-plus"></i>
+                        </button>
+                    </div>
+                    <div class="tool-sep"></div>
+
+                    <!-- Undo / Redo / Clear -->
+                    <div class="tool-group">
+                        <button class="tool-btn" id="btn-undo" title="Undo (Ctrl+Z)" data-i18n-title="common.undoCtrlZ">
+                            <i class="fa-solid fa-rotate-left"></i>
+                        </button>
+                        <button class="tool-btn" id="btn-redo" title="Redo (Ctrl+Y)" data-i18n-title="common.redoCtrlY">
+                            <i class="fa-solid fa-rotate-right"></i>
+                        </button>
+                        <button class="tool-btn danger" id="btn-reset-mask" title="Clear Selection" data-i18n-title="objectRemoval.clearSelection">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                    <div class="tool-sep"></div>
+
+                    <!-- Crop -->
+                    <div class="tool-group">
+                        <button class="tool-btn" id="btn-crop-remover" title="Crop" data-i18n-title="cropTool.title">
+                            <i class="fa-solid fa-crop-simple"></i>
+                        </button>
+                    </div>
+
+                    <!-- New Image -->
+                    <div class="tool-group" style="margin-right:auto;">
+                        <button class="tool-btn" id="btn-new-img-editor" title="Upload New Image" data-i18n-title="common.uploadNewImage">
+                            <i class="fa-solid fa-folder-open"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tip -->
+                <div class="editor-hint">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <span data-i18n="objectRemoval.tip">Paint over the object you want to remove. Use the mouse wheel to zoom. Ctrl+Z to undo.</span>
+                </div>
+
+                <!-- Canvas Area -->
+                <div class="canvas-wrapper" id="rem-canvas-wrapper">
+                    <div class="canvas-inner" id="rem-canvas-inner">
+                        <canvas id="remover-canvas"></canvas>
+                        <canvas id="mask-canvas"></canvas>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="remover-action-row">
+                    <button class="btn-preset" id="btn-change-img"
+                            style="padding:12px 20px; font-size:14px;">
+                        <i class="fa-solid fa-arrow-right" style="margin-left:6px;"></i>
+                        <span data-i18n="common.changeImage">Change Image</span>
+                    </button>
+                    <button class="btn-remove" id="btn-remove-object">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        <span data-i18n="objectRemoval.removeWithAI">Remove Object with AI</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- ============================
+                 Step 3: Results
+                 ============================ -->
+            <div id="rem-result-step" style="display:none;">
+
+                <!-- Results Header -->
+                <div class="result-header">
+                    <h3><i class="fa-solid fa-check-circle" style="color:#22c55e; margin-left:8px;"></i><span data-i18n="common.successTitle">Success!</span></h3>
+                    <div class="view-tabs">
+                        <button class="view-tab active" id="tab-slider"
+                                onclick="remSetView('slider')">
+                            <i class="fa-solid fa-left-right"></i> <span data-i18n="common.compare">Compare</span>
+                        </button>
+                        <button class="view-tab" id="tab-sbs"
+                                onclick="remSetView('sbs')">
+                            <i class="fa-solid fa-table-columns"></i> <span data-i18n="common.sideBySide">Side by Side</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Comparison Slider View -->
+                <div id="view-slider">
+                    <div class="comp-container" id="comp-container">
+                        <img class="comp-before" id="comp-before" src="" alt="Before" data-i18n-alt="common.before">
+                        <img class="comp-after"  id="comp-after"  src="" alt="After" data-i18n-alt="common.after">
+                        <div class="comp-divider" id="comp-divider"></div>
+                        <div class="comp-handle"  id="comp-handle">
+                            <i class="fa-solid fa-left-right"></i>
+                        </div>
+                        <div class="comp-label comp-label-before" data-i18n="common.before">Before</div>
+                        <div class="comp-label comp-label-after" data-i18n="common.after">After</div>
+                    </div>
+                </div>
+
+                <!-- Side by Side View -->
+                <div id="view-sbs" style="display:none;">
+                    <div class="sbs-grid">
+                        <div class="sbs-card">
+                            <img id="sbs-before" src="" alt="Before" data-i18n-alt="common.before">
+                            <div class="sbs-label" data-i18n="common.before">Before</div>
+                        </div>
+                        <div class="sbs-card">
+                            <img id="sbs-after" src="" alt="After" data-i18n-alt="common.after">
+                            <div class="sbs-label sbs-label-after" data-i18n="common.after">After</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Result Buttons -->
+                <div class="result-actions">
+                    <button class="res-btn res-btn-primary" id="btn-download">
+                        <i class="fa-solid fa-download"></i> <span data-i18n="common.downloadImage">Download Image</span>
+                    </button>
+                    <button class="res-btn res-btn-secondary" id="btn-edit-more">
+                        <i class="fa-solid fa-paintbrush"></i> <span data-i18n="objectRemoval.removeMore">Remove More</span>
+                    </button>
+                    <button class="res-btn res-btn-secondary" id="btn-revert">
+                        <i class="fa-solid fa-clock-rotate-left"></i> <span data-i18n="common.revertOriginal">Revert to Original</span>
+                    </button>
+                    <button class="res-btn res-btn-secondary" id="btn-new-image-result">
+                        <i class="fa-solid fa-plus"></i> <span data-i18n="common.newImage">New Image</span>
+                    </button>
+                </div>
+
+                <!-- Version History -->
+                <div class="history-panel">
+                    <h4>
+                        <i class="fa-solid fa-clock-rotate-left" style="color:var(--indigo-light);"></i>
+                        <span data-i18n="objectRemoval.versionHistory">Version History</span>
+                    </h4>
+                    <div class="history-thumbs" id="history-thumbs"></div>
+                </div>
+            </div>
+
+        </section>
+
+    </div><!-- end .container -->
+
+    <!-- ================================================================
+         AI Sticker Maker
+         ================================================================ -->
+    <div class="container">
+    <section id="sticker-maker" class="glass-panel">
+        <div class="section-header">
+            <h2>
+                <i class="fa-solid fa-scissors" style="color:var(--indigo-light); margin-left:10px;"></i>
+                <span data-i18n="stickerMaker.title">AI Sticker Maker</span>
+            </h2>
+            <p data-i18n="stickerMaker.subtitle">Turn any photo into a high-quality transparent sticker in seconds — background removal + professional effects + instant export</p>
+        </div>
+
+        <!-- Step Indicator -->
+        <div class="stk-steps">
+            <div class="stk-step active" id="stk-si-1">
+                <div class="step-num">1</div><span data-i18n="common.uploadPhoto">Upload Photo</span>
+            </div>
+            <div class="stk-connector"></div>
+            <div class="stk-step" id="stk-si-2">
+                <div class="step-num">2</div><span data-i18n="common.smartProcessing">Smart Processing</span>
+            </div>
+            <div class="stk-connector"></div>
+            <div class="stk-step" id="stk-si-3">
+                <div class="step-num">3</div><span data-i18n="stickerMaker.stepEditExport">Edit &amp; Export</span>
+            </div>
+        </div>
+
+        <!-- ============================
+             Step 1: Upload
+             ============================ -->
+        <div id="stk-upload-step">
+            <div class="upload-zone" id="stk-drop-zone"
+                 onclick="document.getElementById('stk-file-input').click()">
+                <div style="width:80px;height:80px;border-radius:22px;margin-bottom:18px;
+                    background:linear-gradient(135deg,rgba(79,70,229,0.2),rgba(192,132,252,0.1));
+                    border:1px solid rgba(79,70,229,0.3);display:flex;align-items:center;justify-content:center;">
+                    <i class="fa-solid fa-scissors" style="font-size:32px;color:var(--indigo-light);"></i>
+                </div>
+                <h3 style="font-size:19px;margin-bottom:8px;" data-i18n="common.dragDropPrompt">Drag your photo here or click to browse</h3>
+                <p style="color:var(--text-muted);font-size:14px;margin-bottom:20px;">
+                    <span data-i18n="stickerMaker.uploadFormats">Supports JPG · JPEG · PNG · WEBP — AI automatically removes the background</span>
+                    <br><span class="raw-support-hint" data-i18n="rawSupport.hint"><i class="fa-solid fa-microchip" style="margin-left:4px;color:var(--c-teal)"></i>RAW: CR2 · NEF · ARW · DNG</span>
+                </p>
+                <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+                    <span style="padding:8px 20px;background:rgba(79,70,229,0.15);border:1px solid var(--indigo-base);border-radius:10px;font-size:14px;color:var(--indigo-light);">
+                        <i class="fa-solid fa-arrow-up-from-bracket" style="margin-left:6px;"></i><span data-i18n="common.browseFiles">Browse Files</span>
+                    </span>
+                </div>
+                <input type="file" id="stk-file-input"
+                       accept="image/jpeg,image/jpg,image/png,image/webp,.cr2,.cr3,.nef,.arw,.dng" style="display:none;">
+            </div>
+
+            <!-- Examples of What Can Be Converted -->
+            <div style="margin-top:22px;">
+                <p style="font-size:13px;color:var(--text-muted);text-align:center;margin-bottom:10px;" data-i18n="stickerMaker.idealFor">Ideal for:</p>
+                <div class="stk-examples">
+                    <span class="stk-example-chip"><i class="fa-solid fa-person" style="margin-left:5px;"></i><span data-i18n="stickerMaker.examplePeople">People &amp; portraits</span></span>
+                    <span class="stk-example-chip"><i class="fa-solid fa-box" style="margin-left:5px;"></i><span data-i18n="stickerMaker.exampleProducts">Products &amp; stores</span></span>
+                    <span class="stk-example-chip"><i class="fa-solid fa-paw" style="margin-left:5px;"></i><span data-i18n="stickerMaker.examplePets">Pets</span></span>
+                    <span class="stk-example-chip"><i class="fa-solid fa-leaf" style="margin-left:5px;"></i><span data-i18n="stickerMaker.exampleNature">Plants &amp; nature</span></span>
+                    <span class="stk-example-chip"><i class="fa-solid fa-car" style="margin-left:5px;"></i><span data-i18n="stickerMaker.exampleVehicles">Cars &amp; vehicles</span></span>
+                    <span class="stk-example-chip"><i class="fa-solid fa-shapes" style="margin-left:5px;"></i><span data-i18n="stickerMaker.exampleAnything">Anything!</span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================
+             Step 2: Processing
+             ============================ -->
+        <div id="stk-process-step" style="display:none;">
+            <div class="stk-processing-screen">
+                <div class="stk-ai-ring">
+                    <div class="outer"></div>
+                    <div class="inner"></div>
+                </div>
+                <div class="stk-proc-title" data-i18n="common.aiWorkingOnPhoto">AI is working on your photo...</div>
+                <div class="stk-proc-bar-wrap">
+                    <div class="stk-proc-bar" id="stk-proc-bar"></div>
+                </div>
+                <div class="stk-proc-stage" id="stk-proc-stage" data-i18n="stickerMaker.stageAnalyzing">Analyzing image and detecting foreground...</div>
+            </div>
+        </div>
+
+        <!-- ============================
+             Step 3: Editor + Export
+             ============================ -->
+        <div id="stk-editor-step" style="display:none;">
+
+            <!-- Top Toolbar -->
+            <div class="stk-toolbar">
+                <div class="tool-group">
+                    <button class="tool-btn active" id="stk-tool-erase" title="Erase (remove area)" data-i18n-title="stickerMaker.eraseTool">
+                        <i class="fa-solid fa-eraser"></i>
+                    </button>
+                    <button class="tool-btn" id="stk-tool-restore" title="Restore Area" data-i18n-title="stickerMaker.restoreTool">
+                        <i class="fa-solid fa-paintbrush"></i>
+                    </button>
+                </div>
+                <div class="tool-sep"></div>
+                <div class="tool-group">
+                    <span class="tool-label" data-i18n="common.brush">Brush</span>
+                    <input type="range" class="brush-range" id="stk-brush-range" min="5" max="100" value="20">
+                    <span class="brush-val" id="stk-brush-label">20</span>
+                </div>
+                <div class="tool-sep"></div>
+                <div class="tool-group">
+                    <button class="tool-btn" id="stk-zoom-out" title="Zoom Out" data-i18n-title="common.zoomOut">
+                        <i class="fa-solid fa-magnifying-glass-minus"></i>
+                    </button>
+                    <span class="zoom-val" id="stk-zoom-label">100%</span>
+                    <button class="tool-btn" id="stk-zoom-in" title="Zoom In" data-i18n-title="common.zoomIn">
+                        <i class="fa-solid fa-magnifying-glass-plus"></i>
+                    </button>
+                </div>
+                <div class="tool-sep"></div>
+                <div class="tool-group">
+                    <button class="tool-btn" id="stk-undo" title="Undo" data-i18n-title="common.undo"><i class="fa-solid fa-rotate-left"></i></button>
+                    <button class="tool-btn" id="stk-redo" title="Redo" data-i18n-title="common.redo"><i class="fa-solid fa-rotate-right"></i></button>
+                    <button class="tool-btn danger" id="stk-reset-mask" title="Reset Crop" data-i18n-title="stickerMaker.resetCrop">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                    </button>
+                </div>
+                <div class="tool-sep"></div>
+                <div class="tool-group">
+                    <button class="tool-btn" id="btn-crop-sticker" title="Crop" data-i18n-title="cropTool.title">
+                        <i class="fa-solid fa-crop-simple"></i>
+                    </button>
+                </div>
+                <div class="tool-group" style="margin-right:auto;">
+                    <button class="quick-compare-btn" id="stk-compare-btn">
+                        <i class="fa-solid fa-eye"></i>
+                        <span id="stk-compare-label" data-i18n="stickerMaker.viewOriginal">View Original</span>
+                    </button>
+                    <button class="tool-btn" id="stk-new-img" title="New Image" data-i18n-title="common.newImage">
+                        <i class="fa-solid fa-folder-open"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tip -->
+            <div class="editor-hint" style="margin-bottom:12px;">
+                <i class="fa-solid fa-circle-info"></i>
+                <span data-i18n="stickerMaker.tip">Use the erase brush to remove extra areas, or restore to bring back removed parts. Use the mouse wheel to zoom.</span>
+            </div>
+
+            <!-- Editor Layout -->
+            <div class="stk-editor-layout">
+
+                <!-- Main Preview Area -->
+                <div>
+                    <div class="stk-canvas-wrap checker-bg" id="stk-canvas-wrap">
+                        <div class="stk-canvas-inner" id="stk-canvas-inner">
+                            <canvas id="stk-canvas"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sidebar -->
+                <div class="stk-sidebar">
+
+                    <!-- Background -->
+                    <div class="stk-panel">
+                        <div class="stk-panel-title">
+                            <i class="fa-solid fa-table-cells-large"></i> <span data-i18n="stickerMaker.previewBackground">Preview Background</span>
+                        </div>
+                        <div class="bg-toggle-group">
+                            <button class="bg-toggle-btn active" id="bg-checker" onclick="stkSetBg('checker')">
+                                <i class="fa-solid fa-border-all"></i><br><span data-i18n="stickerMaker.checkerboard">Checkerboard</span>
+                            </button>
+                            <button class="bg-toggle-btn" id="bg-white" onclick="stkSetBg('white')">
+                                <i class="fa-regular fa-square"></i><br><span data-i18n="common.white">White</span>
+                            </button>
+                            <button class="bg-toggle-btn" id="bg-dark" onclick="stkSetBg('dark')">
+                                <i class="fa-solid fa-square"></i><br><span data-i18n="common.black">Black</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Edge Refinement -->
+                    <div class="stk-panel">
+                        <div class="stk-panel-title">
+                            <i class="fa-solid fa-sliders"></i> <span data-i18n="stickerMaker.edgeRefinement">Edge Refinement</span>
+                        </div>
+                        <div class="edge-slider-wrap">
+                            <span data-i18n="common.sharp">Sharp</span>
+                            <input type="range" class="edge-slider" id="stk-edge-slider" min="0" max="5" step="0.5" value="1">
+                            <span data-i18n="common.soft">Soft</span>
+                        </div>
+                    </div>
+
+                    <!-- Effects -->
+                    <div class="stk-panel">
+                        <div class="stk-panel-title">
+                            <i class="fa-solid fa-star"></i> <span data-i18n="stickerMaker.effectsTitle">Sticker Effects</span>
+                        </div>
+                        <div class="effects-grid" id="effects-grid">
+                            <!-- Generated dynamically by JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Export -->
+                    <div class="stk-panel">
+                        <div class="stk-panel-title">
+                            <i class="fa-solid fa-file-export"></i> <span data-i18n="stickerMaker.exportTitle">Export Sticker</span>
+                        </div>
+                        <div class="stk-export-grid">
+                            <button class="stk-export-btn primary" id="stk-dl-png">
+                                <i class="fa-solid fa-download"></i> <span data-i18n="stickerMaker.downloadTransparentPng">Download Transparent PNG</span>
+                            </button>
+                            <button class="stk-export-btn secondary" id="stk-dl-webp">
+                                <i class="fa-brands fa-chrome"></i> WEBP
+                            </button>
+                            <button class="stk-export-btn secondary" id="stk-dl-orig">
+                                <i class="fa-solid fa-image"></i> <span data-i18n="stickerMaker.effectNone">No Effect</span>
+                            </button>
+                            <button class="stk-export-btn secondary clipboard" id="stk-copy-clip">
+                                <i class="fa-solid fa-clipboard"></i> <span data-i18n="common.copyToClipboard">Copy to Clipboard</span>
+                            </button>
+                        </div>
+                        <div class="clipboard-badge" id="stk-clip-badge">
+                            <i class="fa-solid fa-check"></i> <span data-i18n="common.copied">Copied!</span>
+                        </div>
+                    </div>
+
+                </div><!-- end sidebar -->
+            </div><!-- end editor layout -->
+        </div><!-- end editor step -->
+
+    </section>
+    </div><!-- end sticker container -->
+
+    <!-- ================================================================
+         AI Image Enhancer
+         ================================================================ -->
+    <div class="container">
+    <section id="image-enhancer" class="glass-panel">
+        <div class="section-header">
+            <h2>
+                <i class="fa-solid fa-wand-sparkles" style="color:var(--indigo-light);margin-left:10px;"></i>
+                <span data-i18n="imageEnhancer.title">AI Image Enhancer</span>
+            </h2>
+            <p data-i18n="imageEnhancer.subtitle">Enhance your photo quality, remove noise, and multiply resolution — complete AI technology with no external software</p>
+        </div>
+
+        <!-- Step Indicator -->
+        <div class="enh-steps">
+            <div class="enh-step active" id="enh-si-1"><div class="step-num">1</div><span data-i18n="common.uploadPhoto">Upload Photo</span></div>
+            <div class="enh-connector"></div>
+            <div class="enh-step" id="enh-si-2"><div class="step-num">2</div><span data-i18n="common.smartProcessing">Smart Processing</span></div>
+            <div class="enh-connector"></div>
+            <div class="enh-step" id="enh-si-3"><div class="step-num">3</div><span data-i18n="imageEnhancer.stepPreviewExport">Preview &amp; Export</span></div>
+        </div>
+
+        <!-- ============================
+             Step 1: Upload
+             ============================ -->
+        <div id="enh-upload-step">
+            <div class="upload-zone" id="enh-drop-zone"
+                 onclick="document.getElementById('enh-file-input').click()">
+                <div style="width:80px;height:80px;border-radius:22px;margin-bottom:18px;
+                     background:linear-gradient(135deg,rgba(79,70,229,.2),rgba(192,132,252,.1));
+                     border:1px solid rgba(79,70,229,.3);display:flex;align-items:center;justify-content:center;">
+                    <i class="fa-solid fa-wand-sparkles" style="font-size:32px;color:var(--indigo-light);"></i>
+                </div>
+                <h3 style="font-size:19px;margin-bottom:8px;" data-i18n="imageEnhancer.uploadPromptMulti">Drag your photos here or click to browse</h3>
+                <p style="color:var(--text-muted);font-size:14px;margin-bottom:18px;">
+                    <span data-i18n="imageEnhancer.uploadFormatsMulti">Supports JPG · JPEG · PNG · WEBP — you can upload multiple photos for batch processing</span>
+                    <br><span class="raw-support-hint" data-i18n="rawSupport.hint"><i class="fa-solid fa-microchip" style="margin-left:4px;color:var(--c-teal)"></i>RAW: CR2 · NEF · ARW · DNG</span>
+                </p>
+                <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+                    <span style="padding:8px 20px;background:rgba(79,70,229,.15);border:1px solid var(--indigo-base);border-radius:10px;font-size:14px;color:var(--indigo-light);">
+                        <i class="fa-solid fa-arrow-up-from-bracket" style="margin-left:6px;"></i><span data-i18n="common.browseFiles">Browse Files</span>
+                    </span>
+                    <span style="padding:8px 20px;background:rgba(255,255,255,.04);border:1px solid var(--glass-border);border-radius:10px;font-size:14px;color:var(--text-muted);">
+                        <i class="fa-solid fa-copy" style="margin-left:6px;"></i><span data-i18n="common.pasteFromClipboard">Paste from Clipboard</span>
+                    </span>
+                </div>
+                <input type="file" id="enh-file-input"
+                       accept="image/jpeg,image/jpg,image/png,image/webp,.cr2,.cr3,.nef,.arw,.dng"
+                       multiple style="display:none;">
+            </div>
+            <div class="enh-paste-hint">
+                <i class="fa-solid fa-keyboard" style="color:var(--indigo-light);"></i>
+                <span data-i18n-html="imageEnhancer.pasteHint">Or press <kbd>Ctrl</kbd> + <kbd>V</kbd> to paste an image directly from the clipboard</span>
+            </div>
+            <div class="enh-features-grid">
+                <div class="enh-feat-card"><i class="fa-solid fa-magnifying-glass-plus"></i><span data-i18n="imageEnhancer.featUpscale">Upscale 2×/4×/8×</span></div>
+                <div class="enh-feat-card"><i class="fa-solid fa-eye"></i><span data-i18n="imageEnhancer.featSharpness">Enhance Detail &amp; Sharpness</span></div>
+                <div class="enh-feat-card"><i class="fa-solid fa-wind"></i><span data-i18n="imageEnhancer.featDenoise">Remove Digital Noise</span></div>
+                <div class="enh-feat-card"><i class="fa-solid fa-face-smile"></i><span data-i18n="imageEnhancer.featFace">Face Enhancement</span></div>
+                <div class="enh-feat-card"><i class="fa-solid fa-clock-rotate-left"></i><span data-i18n="imageEnhancer.featRestore">Restore Old Photos</span></div>
+                <div class="enh-feat-card"><i class="fa-solid fa-layer-group"></i><span data-i18n="imageEnhancer.featBatch">Batch Processing</span></div>
+            </div>
+        </div>
+
+        <!-- ============================
+             Step 2: Processing
+             ============================ -->
+        <div id="enh-process-step" style="display:none;">
+            <div class="enh-proc-screen">
+                <div class="enh-orb">
+                    <div class="enh-orb-ring r1"></div>
+                    <div class="enh-orb-ring r2"></div>
+                    <div class="enh-orb-ring r3"></div>
+                    <div class="enh-orb-core"></div>
+                </div>
+                <div class="enh-proc-title" id="enh-proc-title" data-i18n="imageEnhancer.processingDefault">Enhancing image...</div>
+                <div class="enh-proc-wrap"><div class="enh-proc-fill" id="enh-proc-fill"></div></div>
+                <div class="enh-proc-stage" id="enh-proc-stage"></div>
+                <div style="font-size:12px;color:var(--text-muted);" id="enh-queue-info"></div>
+            </div>
+        </div>
+
+        <!-- ============================
+             Step 3: Preview & Settings
+             ============================ -->
+        <div id="enh-result-step" style="display:none;">
+
+            <!-- Preview Top Bar -->
+            <div class="enh-view-bar">
+                <div class="enh-view-tabs">
+                    <button class="enh-view-tab active" id="enh-tab-slider" onclick="enhSetView('slider')">
+                        <i class="fa-solid fa-left-right"></i><span data-i18n="common.compare">Compare</span>
+                    </button>
+                    <button class="enh-view-tab" id="enh-tab-sbs" onclick="enhSetView('sbs')">
+                        <i class="fa-solid fa-table-columns"></i><span data-i18n="imageEnhancer.sideBySideShort">Side by Side</span>
+                    </button>
+                </div>
+                <div class="enh-zoom-row">
+                    <button class="tool-btn" id="enh-zoom-out"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+                    <span class="zoom-val" id="enh-zoom-val">100%</span>
+                    <button class="tool-btn" id="enh-zoom-in"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+                    <button class="tool-btn" id="btn-crop-enhancer" title="Crop" data-i18n-title="cropTool.title" style="margin-right:4px;">
+                        <i class="fa-solid fa-crop-simple"></i>
+                    </button>
+                    <button class="tool-btn" id="enh-new-upload" title="Upload New Photos" data-i18n-title="imageEnhancer.uploadNewPhotos" style="margin-right:4px;">
+                        <i class="fa-solid fa-folder-open"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="enh-layout">
+
+                <!-- Preview Area -->
+                <div>
+                    <!-- Slider view -->
+                    <div id="enh-view-slider">
+                        <div class="enh-comp-wrap" id="enh-comp-wrap">
+                            <div class="enh-comp-scroll">
+                                <div class="enh-slider-box" id="enh-slider-box">
+                                    <img id="enh-before-img" src="" alt="Before" data-i18n-alt="common.before">
+                                    <img class="enh-after-img" id="enh-after-img" src="" alt="After" data-i18n-alt="common.after">
+                                    <div class="enh-slider-line" id="enh-slider-line"></div>
+                                    <div class="enh-slider-knob" id="enh-slider-knob">
+                                        <i class="fa-solid fa-left-right"></i>
+                                    </div>
+                                    <div class="enh-comp-lbl before" data-i18n="common.before">Before</div>
+                                    <div class="enh-comp-lbl after" data-i18n="common.after">After</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- SBS view -->
+                    <div id="enh-view-sbs" style="display:none;">
+                        <div class="enh-sbs">
+                            <div class="enh-sbs-card">
+                                <img id="enh-sbs-before" src="" alt="Before" data-i18n-alt="common.before">
+                                <div class="enh-sbs-lbl" data-i18n="common.before">Before</div>
+                            </div>
+                            <div class="enh-sbs-card">
+                                <img id="enh-sbs-after" src="" alt="After" data-i18n-alt="common.after">
+                                <div class="enh-sbs-lbl after" data-i18n="common.after">After</div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Upscale info -->
+                    <div id="enh-dims-info" style="margin-top:8px;font-size:12px;color:var(--text-muted);display:flex;gap:16px;flex-wrap:wrap;"></div>
+                </div>
+
+                <!-- Sidebar -->
+                <div class="enh-sidebar">
+
+                    <!-- Enhancement Settings -->
+                    <div class="enh-panel">
+                        <div class="enh-panel-title"><i class="fa-solid fa-sliders"></i><span data-i18n="imageEnhancer.enhancementSettings">Enhancement Settings</span></div>
+                        <div class="enh-slider-row">
+                            <label data-i18n="imageEnhancer.denoiseLabel">Denoise</label>
+                            <input type="range" class="enh-ctrl-range" id="enh-denoise" min="0" max="1" step="0.05" value="0.3">
+                            <span class="enh-ctrl-val" id="enh-denoise-v">30%</span>
+                        </div>
+                        <div class="enh-slider-row">
+                            <label data-i18n="imageEnhancer.sharpenClarity">Sharpness &amp; Clarity</label>
+                            <input type="range" class="enh-ctrl-range" id="enh-sharpen" min="0" max="1" step="0.05" value="0.5">
+                            <span class="enh-ctrl-val" id="enh-sharpen-v">50%</span>
+                        </div>
+                        <div class="enh-slider-row">
+                            <label data-i18n="imageEnhancer.localClarity">Local Clarity</label>
+                            <input type="range" class="enh-ctrl-range" id="enh-clarity" min="0" max="1" step="0.05" value="0.3">
+                            <span class="enh-ctrl-val" id="enh-clarity-v">30%</span>
+                        </div>
+                        <div class="enh-toggle-row" style="margin-top:10px;">
+                            <label data-i18n="imageEnhancer.faceEnhanceLabel">Face Enhancement</label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="enh-face">
+                                <div class="toggle-track"></div>
+                                <div class="toggle-thumb"></div>
+                            </label>
+                        </div>
+                        <div class="enh-toggle-row">
+                            <label data-i18n="imageEnhancer.restoreOldLabel">Restore Old Photos</label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="enh-restore">
+                                <div class="toggle-track"></div>
+                                <div class="toggle-thumb"></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Upscale Resolution -->
+                    <div class="enh-panel">
+                        <div class="enh-panel-title"><i class="fa-solid fa-expand"></i><span data-i18n="imageEnhancer.upscaleResolution">Upscale Resolution</span></div>
+                        <div class="upscale-btns">
+                            <button class="upscale-btn active" data-scale="1">1×</button>
+                            <button class="upscale-btn"        data-scale="2">2×</button>
+                            <button class="upscale-btn"        data-scale="4">4×</button>
+                            <button class="upscale-btn"        data-scale="8">8×</button>
+                        </div>
+                        <div style="font-size:11px;color:var(--text-muted);margin-top:8px;" id="enh-scale-note"></div>
+                    </div>
+
+                    <!-- Image Batch -->
+                    <div class="enh-panel" id="enh-batch-panel">
+                        <div class="enh-panel-title"><i class="fa-solid fa-layer-group"></i><span data-i18n="imageEnhancer.imageList">Image List</span> (<span id="enh-batch-count">0</span>)</div>
+                        <div class="batch-list" id="enh-batch-list"></div>
+                    </div>
+
+                    <!-- Apply Button -->
+                    <button class="btn-reenhance" id="btn-reenhance">
+                        <i class="fa-solid fa-wand-sparkles"></i>
+                        <span data-i18n="imageEnhancer.applyEnhancements">Apply Enhancements</span>
+                    </button>
+
+                    <!-- Export -->
+                    <div class="enh-panel">
+                        <div class="enh-panel-title"><i class="fa-solid fa-file-export"></i><span data-i18n="imageEnhancer.exportImage">Export Image</span></div>
+                        <div class="enh-format-row">
+                            <button class="enh-fmt-btn active" data-fmt="png">PNG</button>
+                            <button class="enh-fmt-btn"        data-fmt="jpg">JPG</button>
+                            <button class="enh-fmt-btn"        data-fmt="webp">WEBP</button>
+                        </div>
+                        <div class="enh-slider-row" id="enh-quality-row" style="display:none;">
+                            <label data-i18n="common.quality">Quality</label>
+                            <input type="range" class="enh-ctrl-range" id="enh-quality" min="60" max="100" value="92">
+                            <span class="enh-ctrl-val" id="enh-quality-v">92%</span>
+                        </div>
+                        <div class="enh-export-btns">
+                            <button class="enh-exp-btn primary" id="enh-dl-btn">
+                                <i class="fa-solid fa-download"></i><span data-i18n="imageEnhancer.downloadEnhanced">Download Enhanced Image</span>
+                            </button>
+                            <button class="enh-exp-btn secondary" id="enh-dl-all-btn" style="display:none;">
+                                <i class="fa-solid fa-file-zipper"></i><span data-i18n="imageEnhancer.downloadAllZip">Download All (ZIP)</span>
+                            </button>
+                        </div>
+                    </div>
+
+                </div><!-- end sidebar -->
+            </div><!-- end enh-layout -->
+        </div><!-- end result step -->
+
+    </section>
+    </div><!-- end enhancer container -->
+
+
+    <!-- ════════════════════════════════════════════════════════
+         Legacy java.js compatibility stubs — HIDDEN
+         العناصر دي ضرورية لـ java.js يشتغل صح.
+         makeWheelInteractive + SA.init + Histogram + imageInput
+         كلهم يبحثون عن هذي الـ IDs عند التهيئة.
+         ════════════════════════════════════════════════════════ -->
+    <div style="display:none!important;visibility:hidden;position:absolute;pointer-events:none;" aria-hidden="true">
+        <!-- Old color grading wheels (makeWheelInteractive) -->
+        <div id="wheel-shadows"  style="width:1px;height:1px;">
+            <div id="ptr-shadows"></div>
+            <span id="val-shadows"></span>
+        </div>
+        <div id="wheel-midtones" style="width:1px;height:1px;">
+            <div id="ptr-midtones"></div>
+            <span id="val-midtones"></span>
+        </div>
+        <div id="wheel-highlights" style="width:1px;height:1px;">
+            <div id="ptr-highlights"></div>
+            <span id="val-highlights"></span>
+        </div>
+        <!-- Old grading upload zone -->
+        <input type="file" id="image-input" accept="image/*,.cr2,.cr3,.nef,.arw,.dng">
+        <div id="drop-zone"></div>
+        <!-- Old image preview -->
+        <div id="img-preview-wrapper">
+            <img id="target-image" alt="" src="">
+        </div>
+        <!-- Old histogram -->
+        <div id="hist-panel">
+            <canvas id="hist-canvas" width="300" height="120"></canvas>
+        </div>
+        <!-- Old selective adjustment brush -->
+        <div id="sa-toolbar"></div>
+        <button id="sa-toggle-btn" type="button"></button>
+        <canvas id="sa-mask-canvas" width="1" height="1"></canvas>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <p class="footer-brandline">
+            <span class="footer-creators">Lara &amp; Hussein</span>
+            <img class="footer-logo" src="assets/chromaiq-logo.png" alt="ChromaIQ" width="1113" height="261" loading="lazy">
+            <span class="footer-copyright">&copy; 2026</span>
+        </p>
+    </footer>
+
+     <!-- JavaScript Scripts -->
+     <script src="i18n.js?v=20260829c"></script>
+     <script src="raw-preview.js?v=20260829c"></script>
+     <script src="crop-tool.js?v=20260829c"></script>
+     <script src="java.js?v=20260829c"></script>
+     <script src="color-grading.js?v=20260829c"></script>
+     <script>ChromaGrading.init();</script>
+</body>
+</html>

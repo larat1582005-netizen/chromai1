@@ -1,0 +1,146 @@
+
+/* ============================================================
+   CHROMA CROP TOOL — modal overlay + interactive crop box
+   Reused by Object Remover, Sticker Maker, and Image Enhancer.
+   Matches existing .loader-overlay / .tool-btn / .btn-preset tokens.
+   ============================================================ */
+
+.crop-modal {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(11, 15, 25, 0.88);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    z-index: 10000;
+    align-items: center; justify-content: center;
+    padding: 20px;
+}
+.crop-modal.active { display: flex; }
+
+.crop-modal-inner {
+    background: var(--glass-bg, rgba(8,10,16,0.92));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-custom, 20px);
+    width: min(720px, 96vw);
+    max-height: 92vh;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+
+.crop-modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 22px 14px;
+    border-bottom: 1px solid var(--glass-border);
+}
+.crop-modal-header h3 {
+    font-size: 17px; font-weight: 700; color: var(--text-main); margin: 0;
+}
+.crop-close-btn {
+    width: 32px; height: 32px; border-radius: 9px;
+    border: 1px solid var(--glass-border); background: rgba(255,255,255,0.03);
+    color: var(--text-muted); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+}
+.crop-close-btn:hover { background: rgba(239,68,68,0.18); color: #ef4444; border-color: rgba(239,68,68,0.4); }
+
+/* Aspect ratio preset row */
+.crop-aspect-row {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    padding: 14px 22px;
+    border-bottom: 1px solid var(--glass-border);
+}
+.crop-aspect-btn {
+    background: #1e293b; border: 1px solid var(--glass-border); color: var(--text-main);
+    padding: 7px 14px; border-radius: 10px; cursor: pointer;
+    font-weight: 600; font-size: 12px; transition: all 0.2s ease;
+    font-family: var(--font-body);
+}
+.crop-aspect-btn:hover { border-color: var(--indigo-light); color: var(--indigo-light); }
+.crop-aspect-btn.active { background: var(--indigo-base); border-color: var(--indigo-light); color: #fff; }
+
+/* Stage: the image + crop box live here */
+.crop-stage {
+    position: relative;
+    margin: 20px auto;
+    max-width: 100%;
+    user-select: none;
+    touch-action: none;
+    flex-shrink: 0;
+}
+.crop-stage img {
+    display: block;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    border-radius: 4px;
+}
+
+.crop-mask {
+    position: absolute;
+    background: rgba(5, 6, 10, 0.72);
+    pointer-events: none;
+}
+.crop-mask-top    { top: 0; left: 0; right: 0; }
+.crop-mask-bottom { left: 0; right: 0; bottom: 0; }
+.crop-mask-left   { top: 0; }
+.crop-mask-right  { top: 0; }
+
+.crop-box {
+    position: absolute;
+    border: 2px solid var(--indigo-light);
+    box-shadow: 0 0 0 9999px rgba(0,0,0,0); /* keeps stacking context simple */
+    cursor: move;
+}
+
+.crop-grid-line {
+    position: absolute;
+    background: rgba(255,255,255,0.25);
+    pointer-events: none;
+}
+.crop-grid-v1 { top: 0; bottom: 0; left: 33.333%; width: 1px; }
+.crop-grid-v2 { top: 0; bottom: 0; left: 66.666%; width: 1px; }
+.crop-grid-h1 { left: 0; right: 0; top: 33.333%; height: 1px; }
+.crop-grid-h2 { left: 0; right: 0; top: 66.666%; height: 1px; }
+
+.crop-handle {
+    position: absolute;
+    width: 14px; height: 14px;
+    background: var(--indigo-light);
+    border: 2px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 6px rgba(79,70,229,0.6);
+}
+.crop-h-nw { top: -7px;  left: -7px;  cursor: nwse-resize; }
+.crop-h-ne { top: -7px;  right: -7px; cursor: nesw-resize; }
+.crop-h-sw { bottom: -7px; left: -7px;  cursor: nesw-resize; }
+.crop-h-se { bottom: -7px; right: -7px; cursor: nwse-resize; }
+.crop-h-n  { top: -7px;  left: 50%; margin-left: -7px; cursor: ns-resize; }
+.crop-h-s  { bottom: -7px; left: 50%; margin-left: -7px; cursor: ns-resize; }
+.crop-h-e  { right: -7px; top: 50%; margin-top: -7px; cursor: ew-resize; }
+.crop-h-w  { left: -7px;  top: 50%; margin-top: -7px; cursor: ew-resize; }
+
+/* Footer */
+.crop-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px;
+    padding: 16px 22px;
+    border-top: 1px solid var(--glass-border);
+}
+.crop-dims {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px; color: var(--text-muted);
+}
+.crop-footer-btns { display: flex; gap: 10px; }
+.crop-footer-btns .btn-preset,
+.crop-footer-btns .btn-remove {
+    padding: 10px 18px; font-size: 13px;
+}
+
+@media (max-width: 640px) {
+    .crop-modal-inner { width: 96vw; }
+    .crop-aspect-row { padding: 10px 14px; gap: 6px; }
+    .crop-aspect-btn { padding: 6px 10px; font-size: 11px; }
+    .crop-footer { flex-direction: column; align-items: stretch; }
+    .crop-footer-btns { justify-content: stretch; }
+    .crop-footer-btns button { flex: 1; }
+}

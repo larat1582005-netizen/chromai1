@@ -1,0 +1,164 @@
+  /* ═══════════════════════════════════════════════════════════
+   ChromaIQ — Multilingual System Styles
+   Built to match the existing design system exactly:
+   uses --indigo-base, --glass-border, --text-muted, --text-main,
+   --radius-custom, --font-display, --font-body. No new colors,
+   no layout changes — only the language switcher + RTL/LTR rules.
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── LANGUAGE SWITCHER (sits in .nav-right, next to the hamburger) ───
+   Compact by default: globe icon + current language only.
+   On hover, the switcher expands and reveals the other language
+   with a smooth slide/fade so switching feels like one deliberate
+   gesture rather than two static buttons sitting side by side. ─── */
+.lang-switcher {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  padding: 3px 8px 3px 3px;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: background 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.lang-switcher:hover {
+  background: rgba(79, 70, 229, 0.08);
+  border-color: rgba(79, 70, 229, 0.35);
+  box-shadow: 0 4px 16px rgba(79, 70, 229, 0.18);
+}
+
+.lang-switcher-icon {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 0 2px;
+  transition: color 0.25s ease, transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.lang-switcher:hover .lang-switcher-icon {
+  color: var(--indigo-light);
+  transform: rotate(-18deg);
+}
+
+.lang-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: all 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Active language: always visible, filled pill */
+.lang-btn.active {
+  padding: 6px 13px;
+  min-width: 34px;
+  max-width: 60px;
+  opacity: 1;
+  background: linear-gradient(135deg, var(--indigo-base), var(--indigo-dark));
+  color: #ffffff;
+  box-shadow: 0 2px 12px rgba(79, 70, 229, 0.45);
+}
+
+/* Inactive language: collapsed to nothing until the switcher is hovered */
+.lang-btn:not(.active) {
+  padding: 6px 0;
+  min-width: 0;
+  max-width: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.lang-switcher:hover .lang-btn:not(.active) {
+  padding: 6px 13px;
+  min-width: 34px;
+  max-width: 60px;
+  opacity: 1;
+  pointer-events: auto;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-main);
+}
+
+.lang-switcher:hover .lang-btn:not(.active):hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--indigo-light);
+}
+
+.lang-btn:focus-visible {
+  outline: 2px solid var(--indigo-light);
+  outline-offset: 2px;
+}
+
+/* Touch devices have no hover — always show both options so the
+   switcher stays fully usable on mobile/tablet. */
+@media (hover: none) {
+  .lang-switcher { padding: 3px; }
+  .lang-btn:not(.active) {
+    padding: 6px 11px;
+    min-width: 30px;
+    max-width: 60px;
+    opacity: 1;
+    pointer-events: auto;
+    background: rgba(255, 255, 255, 0.05);
+  }
+}
+
+@media (max-width: 639px) {
+  .lang-switcher { padding: 2px 6px 2px 2px; }
+  .lang-switcher-icon { font-size: 10px; }
+  .lang-btn.active,
+  .lang-btn:not(.active) { padding: 5px 10px; font-size: 10px; min-width: 28px; }
+}
+
+/* ─── ROOT LANGUAGE-SWITCH TRANSITION ─── */
+html {
+  transition: filter 0.25s ease;
+}
+
+/* ─── RTL LAYOUT ─── */
+/* The vast majority of this layout already uses flex/grid with logical
+   alignment, so [dir="rtl"] inherits correctly almost everywhere through
+   normal CSS bidi behavior. The overrides below cover the few spots that
+   need an explicit nudge. */
+
+[dir="rtl"] body { direction: rtl; }
+
+/* Score/camera/preset grids and the color-wheel canvas: keep LTR so
+   numeric dials, sliders and SVG wheels don't mirror their geometry. */
+[dir="rtl"] .wheels-wrapper,
+[dir="rtl"] .color-wheel-svg,
+[dir="rtl"] .score-ring-wrap svg,
+[dir="rtl"] canvas {
+  direction: ltr;
+}
+
+/* Toast / floating notification: mirror side */
+[dir="rtl"] .remover-toast {
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Icon-before-text buttons keep their existing DOM order and margins;
+   this matches how the original Arabic/RTL site was already designed
+   and built, so no change is needed there for either direction. */
+
+/* Chat bubble alignment uses align-self:flex-start/flex-end inside a
+   column flex container, which already respects `dir` per the CSS
+   spec, so user/assistant bubbles correctly swap sides automatically. */

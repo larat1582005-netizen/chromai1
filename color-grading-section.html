@@ -1,0 +1,353 @@
+<!-- ════════════════════════════════════════════════════════════════
+     ChromaIQ — Professional Color Grading Engine
+     Replace the entire <section id="grading-hub"> block with this.
+     Requires: color-grading.css  +  color-grading.js
+     Add to <head>:  <link rel="stylesheet" href="color-grading.css">
+     Add before </body>: <script src="color-grading.js"></script>
+                         <script>ChromaGrading.init();</script>
+     ════════════════════════════════════════════════════════════════ -->
+
+<section id="grading-hub" class="glass-panel">
+
+  <!-- ── Section Header ───────────────────────────────────────── -->
+  <div class="section-header">
+    <h2 data-i18n="colorGrading.title">
+      <i class="fa-solid fa-sliders" style="color:var(--indigo-light);margin-left:10px;"></i>
+      Professional Color Grading Engine
+    </h2>
+    <p data-i18n="colorGrading.subtitle">
+      DaVinci Resolve–style color wheels with real-time preview, AI-powered grading, professional scopes, and film-look presets.
+    </p>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       STEP 1 — UPLOAD
+       ══════════════════════════════════════════════════════════ -->
+  <div id="cg-upload-step">
+    <div class="cg-upload-zone" id="cg-drop-zone">
+      <div class="cg-upload-icon">
+        <i class="fa-solid fa-photo-film"></i>
+      </div>
+      <h3 style="font-size:18px;margin:0;" data-i18n="common.dragDropPrompt">Drag your photo here or click to browse</h3>
+      <p style="color:var(--text-muted);font-size:14px;margin:0;">
+        <span data-i18n="common.supportedFormatsHiRes">JPG · JPEG · PNG · WEBP — high resolution supported</span>
+        <br>
+        <span style="color:var(--c-teal);font-size:13px;" data-i18n="rawSupport.hint">
+          <i class="fa-solid fa-microchip" style="margin-left:4px;"></i>RAW: CR2 · NEF · ARW · DNG
+        </span>
+      </p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
+        <span style="padding:9px 22px;background:rgba(79,70,229,0.15);border:1px solid var(--indigo-base);border-radius:10px;font-size:14px;color:var(--indigo-light);">
+          <i class="fa-solid fa-arrow-up-from-bracket" style="margin-left:6px;"></i>
+          <span data-i18n="common.browseFiles">Browse Files</span>
+        </span>
+        <span style="padding:9px 22px;background:rgba(255,255,255,0.04);border:1px solid var(--glass-border);border-radius:10px;font-size:14px;color:var(--text-muted);">
+          <i class="fa-solid fa-paste" style="margin-left:6px;"></i>
+          <span data-i18n="photoAssistant.pasteImage">Paste (Ctrl+V)</span>
+        </span>
+      </div>
+      <input type="file" id="cg-file-input" accept="image/*,.cr2,.cr3,.nef,.arw,.dng" style="display:none;">
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       STEP 2 — GRADING WORKSPACE
+       ══════════════════════════════════════════════════════════ -->
+  <div id="cg-workspace" style="display:none;">
+
+    <div class="cg-workspace-grid">
+
+      <!-- ╔══════════════════════════════════════╗
+           ║  LEFT PANEL — Image + Scopes         ║
+           ╚══════════════════════════════════════╝ -->
+      <div class="cg-left-panel">
+
+        <!-- Compare & utility toolbar -->
+        <div class="cg-compare-bar">
+          <span style="font-size:11px;font-weight:700;color:var(--text-muted);font-family:'Orbitron',monospace;letter-spacing:.08em;">VIEW</span>
+          <button class="tool-btn" id="cg-btn-before" title="Toggle before/after">
+            <i class="fa-solid fa-circle-half-stroke"></i>&nbsp;Before
+          </button>
+          <button class="tool-btn" id="cg-btn-split" title="Split comparison">
+            <i class="fa-solid fa-columns"></i>&nbsp;Split
+          </button>
+          <div class="cg-compare-divider"></div>
+          <span class="cg-file-info" id="cg-file-info">—</span>
+          <div class="cg-undo-redo">
+            <button class="tool-btn" id="cg-undo-btn" title="Undo (Ctrl+Z)" disabled>
+              <i class="fa-solid fa-rotate-left"></i>
+            </button>
+            <button class="tool-btn" id="cg-redo-btn" title="Redo (Ctrl+Y)" disabled>
+              <i class="fa-solid fa-rotate-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Canvas + split overlay -->
+        <div class="cg-canvas-wrap">
+          <canvas id="cg-main-canvas"></canvas>
+
+          <!-- Split labels (visible in split mode only via JS toggling) -->
+          <div class="cg-split-label cg-split-label-before" id="cg-lbl-before" style="display:none;">BEFORE</div>
+          <div class="cg-split-label cg-split-label-after"  id="cg-lbl-after"  style="display:none;">AFTER</div>
+
+          <!-- Split drag handle overlay -->
+          <div class="cg-split-handle-wrap" id="cg-split-wrap">
+            <div class="cg-split-line-el" id="cg-split-line" style="left:50%;"></div>
+            <div class="cg-split-knob"    id="cg-split-knob" style="left:50%;top:50%;">
+              <i class="fa-solid fa-arrows-left-right"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action row -->
+        <div class="cg-action-bar">
+          <button class="cg-btn-export" id="cg-btn-export">
+            <i class="fa-solid fa-download"></i> Export Full-Res
+          </button>
+          <button class="cg-btn-new" id="cg-btn-new">
+            <i class="fa-solid fa-folder-open"></i> New Photo
+          </button>
+        </div>
+
+        <!-- ── Professional Scopes ─────────────────────────── -->
+        <div class="cg-scopes-panel">
+          <div class="cg-scope-tabs">
+            <button class="cg-scope-tab active" data-scope="histogram">HISTOGRAM</button>
+            <button class="cg-scope-tab"        data-scope="parade">RGB PARADE</button>
+            <button class="cg-scope-tab"        data-scope="vectorscope">VECTORSCOPE</button>
+          </div>
+          <div class="cg-scope-canvas-wrap">
+            <canvas id="cg-scope-canvas" width="400" height="110"></canvas>
+          </div>
+        </div>
+
+      </div><!-- /left panel -->
+
+      <!-- ╔══════════════════════════════════════╗
+           ║  RIGHT PANEL — Controls              ║
+           ╚══════════════════════════════════════╝ -->
+      <div class="cg-right-panel">
+
+        <!-- ── Color Wheels ─────────────────────────────────── -->
+        <div class="cg-panel-card">
+          <div class="cg-card-header">
+            <div class="cg-card-title">
+              <span class="cg-card-title-dot" style="color:var(--indigo-light);background:var(--indigo-light);"></span>
+              COLOR WHEELS
+            </div>
+            <button class="tool-btn" id="cg-reset-all" style="font-size:11px;height:28px;padding:0 10px;width:auto;">
+              <i class="fa-solid fa-arrows-rotate"></i> Reset All
+            </button>
+          </div>
+          <div class="cg-card-body">
+            <div class="cg-wheels-grid">
+
+              <!-- LIFT (Shadows) -->
+              <div class="cg-wheel-card cg-wheel-lift">
+                <div class="cg-wheel-label">
+                  LIFT
+                  <span class="cg-wheel-label-sub">(Shadows)</span>
+                </div>
+                <div class="cg-wheel-disc" id="cg-disc-lift">
+                  <div class="cg-wheel-pointer" id="cg-ptr-lift"></div>
+                </div>
+                <div class="cg-intensity-row">
+                  <span class="cg-intensity-label">STR</span>
+                  <input type="range" class="cg-intensity-slider" id="cg-str-lift" min="0" max="100" value="0">
+                  <span class="cg-intensity-val" id="cg-strval-lift">0</span>
+                </div>
+              </div>
+
+              <!-- GAMMA (Midtones) -->
+              <div class="cg-wheel-card cg-wheel-gamma">
+                <div class="cg-wheel-label">
+                  GAMMA
+                  <span class="cg-wheel-label-sub">(Mids)</span>
+                </div>
+                <div class="cg-wheel-disc" id="cg-disc-gamma">
+                  <div class="cg-wheel-pointer" id="cg-ptr-gamma"></div>
+                </div>
+                <div class="cg-intensity-row">
+                  <span class="cg-intensity-label">STR</span>
+                  <input type="range" class="cg-intensity-slider" id="cg-str-gamma" min="0" max="100" value="0">
+                  <span class="cg-intensity-val" id="cg-strval-gamma">0</span>
+                </div>
+              </div>
+
+              <!-- GAIN (Highlights) -->
+              <div class="cg-wheel-card cg-wheel-gain">
+                <div class="cg-wheel-label">
+                  GAIN
+                  <span class="cg-wheel-label-sub">(Highlights)</span>
+                </div>
+                <div class="cg-wheel-disc" id="cg-disc-gain">
+                  <div class="cg-wheel-pointer" id="cg-ptr-gain"></div>
+                </div>
+                <div class="cg-intensity-row">
+                  <span class="cg-intensity-label">STR</span>
+                  <input type="range" class="cg-intensity-slider" id="cg-str-gain" min="0" max="100" value="0">
+                  <span class="cg-intensity-val" id="cg-strval-gain">0</span>
+                </div>
+              </div>
+
+              <!-- OFFSET (Global) -->
+              <div class="cg-wheel-card cg-wheel-offset">
+                <div class="cg-wheel-label">
+                  OFFSET
+                  <span class="cg-wheel-label-sub">(Global)</span>
+                </div>
+                <div class="cg-wheel-disc" id="cg-disc-offset">
+                  <div class="cg-wheel-pointer" id="cg-ptr-offset"></div>
+                </div>
+                <div class="cg-intensity-row">
+                  <span class="cg-intensity-label">STR</span>
+                  <input type="range" class="cg-intensity-slider" id="cg-str-offset" min="0" max="100" value="0">
+                  <span class="cg-intensity-val" id="cg-strval-offset">0</span>
+                </div>
+              </div>
+
+            </div><!-- /wheels-grid -->
+            <p style="font-size:10px;color:var(--text-muted);margin-top:10px;text-align:center;">
+              Drag wheel pointer to tint · Double-click to reset · Adjust strength below
+            </p>
+          </div>
+        </div><!-- /wheels card -->
+
+        <!-- ── Tone Controls ─────────────────────────────────── -->
+        <div class="cg-panel-card">
+          <div class="cg-card-header">
+            <div class="cg-card-title">
+              <span class="cg-card-title-dot" style="color:#fbbf24;background:#fbbf24;"></span>
+              TONE CONTROLS
+            </div>
+          </div>
+          <div class="cg-card-body">
+            <div class="cg-tone-grid">
+
+              <div class="cg-tone-row">
+                <label class="cg-tone-label" for="cg-tone-exposure">Exposure</label>
+                <input type="range" class="cg-tone-slider" id="cg-tone-exposure"    min="-100" max="100" value="0">
+                <span class="cg-tone-val" id="cg-tone-exposure-val">0</span>
+              </div>
+
+              <div class="cg-tone-row">
+                <label class="cg-tone-label" for="cg-tone-contrast">Contrast</label>
+                <input type="range" class="cg-tone-slider" id="cg-tone-contrast"    min="-100" max="100" value="0">
+                <span class="cg-tone-val" id="cg-tone-contrast-val">0</span>
+              </div>
+
+              <div class="cg-tone-row">
+                <label class="cg-tone-label" for="cg-tone-shadows">Shadows</label>
+                <input type="range" class="cg-tone-slider" id="cg-tone-shadows"     min="-100" max="100" value="0">
+                <span class="cg-tone-val" id="cg-tone-shadows-val">0</span>
+              </div>
+
+              <div class="cg-tone-row">
+                <label class="cg-tone-label" for="cg-tone-highlights">Highlights</label>
+                <input type="range" class="cg-tone-slider" id="cg-tone-highlights"  min="-100" max="100" value="0">
+                <span class="cg-tone-val" id="cg-tone-highlights-val">0</span>
+              </div>
+
+              <div style="height:1px;background:var(--glass-border);margin:4px 0;"></div>
+
+              <div class="cg-tone-row">
+                <label class="cg-tone-label" for="cg-tone-saturation">Saturation</label>
+                <input type="range" class="cg-tone-slider" id="cg-tone-saturation"  min="-100" max="100" value="0">
+                <span class="cg-tone-val" id="cg-tone-saturation-val">0</span>
+              </div>
+
+              <div class="cg-tone-row">
+                <label class="cg-tone-label" for="cg-tone-vibrance">Vibrance</label>
+                <input type="range" class="cg-tone-slider" id="cg-tone-vibrance"    min="-100" max="100" value="0">
+                <span class="cg-tone-val" id="cg-tone-vibrance-val">0</span>
+              </div>
+
+              <div style="height:1px;background:var(--glass-border);margin:4px 0;"></div>
+
+              <div class="cg-tone-row">
+                <label class="cg-tone-label" for="cg-tone-temperature">Temp</label>
+                <input type="range" class="cg-tone-slider" id="cg-tone-temperature" min="-100" max="100" value="0"
+                  style="background:linear-gradient(to right,#6ab8f7,rgba(255,255,255,0.08),#f7a96a);">
+                <span class="cg-tone-val" id="cg-tone-temperature-val">0</span>
+              </div>
+
+              <div class="cg-tone-row">
+                <label class="cg-tone-label" for="cg-tone-tint">Tint</label>
+                <input type="range" class="cg-tone-slider" id="cg-tone-tint"        min="-100" max="100" value="0"
+                  style="background:linear-gradient(to right,#52d472,rgba(255,255,255,0.08),#cc52d4);">
+                <span class="cg-tone-val" id="cg-tone-tint-val">0</span>
+              </div>
+
+            </div><!-- /tone-grid -->
+          </div>
+        </div><!-- /tone controls card -->
+
+        <!-- ── AI Color Grading ──────────────────────────────── -->
+        <div class="cg-panel-card">
+          <div class="cg-card-header">
+            <div class="cg-card-title">
+              <span class="cg-card-title-dot" style="color:#34d399;background:#34d399;"></span>
+              AI GRADING
+            </div>
+            <div class="cg-ai-badge">
+              <span></span>Gemini
+            </div>
+          </div>
+          <div class="cg-card-body">
+
+            <!-- Quick prompt chips -->
+            <div class="cg-ai-chips">
+              <button class="cg-ai-chip" data-prompt="Make this image look cinematic like a Hollywood film with teal shadows and warm orange highlights">Cinematic</button>
+              <button class="cg-ai-chip" data-prompt="Create a warm golden hour sunset look with rich amber tones">Golden Hour</button>
+              <button class="cg-ai-chip" data-prompt="Apply a dark and moody look with desaturated colors and deep shadows">Dark &amp; Moody</button>
+              <button class="cg-ai-chip" data-prompt="Emulate Kodak Portra film stock with natural skin tones and soft pastel colors">Kodak Portra</button>
+              <button class="cg-ai-chip" data-prompt="Create a cool blue cyberpunk aesthetic with neon color pops">Cyberpunk</button>
+              <button class="cg-ai-chip" data-prompt="Fix the white balance and color cast, make the image look neutral and natural">Fix Colors</button>
+            </div>
+
+            <!-- AI output -->
+            <div class="cg-ai-output" id="cg-ai-output"></div>
+
+            <!-- Input row -->
+            <div class="cg-ai-input-row">
+              <input type="text" class="cg-ai-text" id="cg-ai-text"
+                placeholder="Describe a look... e.g. vintage film, teal &amp; orange, film noir…">
+              <button class="cg-ai-send" id="cg-ai-send" title="Apply AI grade">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+              </button>
+            </div>
+
+          </div>
+        </div><!-- /AI card -->
+
+      </div><!-- /right panel -->
+
+    </div><!-- /workspace-grid -->
+
+    <!-- ── Film Look Presets ─────────────────────────────────── -->
+    <div class="cg-panel-card cg-presets-bar" style="margin-top:18px;">
+      <div class="cg-card-header">
+        <div class="cg-card-title">
+          <span class="cg-card-title-dot" style="color:#c084fc;background:#c084fc;"></span>
+          FILM LOOKS
+        </div>
+        <span style="font-size:11px;color:var(--text-muted);">Click a preset — thumbnails show exact grade on your photo</span>
+      </div>
+      <div class="cg-card-body" style="padding:12px 16px 14px;">
+        <div class="cg-presets-scroll" id="cg-presets-scroll">
+          <!-- Generated dynamically by color-grading.js after image load -->
+          <div style="color:var(--text-muted);font-size:12px;padding:6px 0;">
+            Upload an image to see personalized previews.
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /workspace -->
+
+  <!-- Hidden canvas used for full-res analysis (kept for legacy java.js compat) -->
+  <canvas id="analysis-canvas" style="display:none;"></canvas>
+
+</section>
+<!-- ════ END #grading-hub ═══════════════════════════════════════ -->
