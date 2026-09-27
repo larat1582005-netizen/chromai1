@@ -81,7 +81,7 @@ body {
         .nav-right { 
             display: flex;
              align-items: center;
-              gap:25px ;
+             gap: clamp(16px, 3vw, 40px);
              }
         .nav-links { 
             display: flex;
